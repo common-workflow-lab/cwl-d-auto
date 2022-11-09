@@ -36,13 +36,6 @@ EOS".outdent[0 .. $ - 1])(args[0].baseName);
 		import dyaml : Node;
 		import std : match, tryMatch, writefln;
 
-		import salad.meta.parser : DocRootType = DocumentRootType, import_ = importFromURI;
-
-		// Loader for generated data structures
-		alias importFromURI = import_!(cwl_d_auto.v1_0);
-		// DocumentRootType is one of CommandLineTool, Workflow and ExpressionTool
-		alias DocumentRootType = DocRootType!(cwl_d_auto.v1_0);
-
 		// Loading file
 		auto uri = file.absoluteURI;
 

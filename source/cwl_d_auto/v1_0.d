@@ -7,10 +7,12 @@ module cwl_d_auto.v1_0;
 
 import salad.meta.dumper : genDumper;
 import salad.meta.impl : genCtor, genIdentifier, genOpEq;
+import salad.meta.parser : import_ = importFromURI;
 import salad.meta.uda : documentRoot, id, idMap, link, typeDSL;
 import salad.primitives : SchemaBase;
 import salad.type : None, Optional, SumType;
 
+/// parser information
 enum parserInfo = "CWL v1.0 parser generated with schema-salad-tool";
 
 /**
@@ -70,6 +72,7 @@ class RecordField : SchemaBase
     mixin genDumper;
 }
 
+///
 class RecordSchema : SchemaBase
 {
     /**
@@ -105,6 +108,7 @@ class EnumSchema : SchemaBase
     mixin genDumper;
 }
 
+///
 class ArraySchema : SchemaBase
 {
     /**
@@ -487,6 +491,7 @@ class Expression : SchemaBase
     mixin genDumper;
 }
 
+///
 class InputRecordField : SchemaBase
 {
     /**
@@ -501,6 +506,7 @@ class InputRecordField : SchemaBase
      * The field type
      */
     @typeDSL SumType!(CWLType, InputRecordSchema, InputEnumSchema, InputArraySchema, string, SumType!(CWLType, InputRecordSchema, InputEnumSchema, InputArraySchema, string)[]) type_;
+    ///
     SumType!(None, CommandLineBinding) inputBinding_;
     /**
      * A short, human-readable label of this process object.
@@ -512,6 +518,7 @@ class InputRecordField : SchemaBase
     mixin genDumper;
 }
 
+///
 class InputRecordSchema : SchemaBase
 {
     /**
@@ -526,6 +533,7 @@ class InputRecordSchema : SchemaBase
      * A short, human-readable label of this object.
      */
     SumType!(None, string) label_;
+    ///
     @id SumType!(None, string) name_;
 
     mixin genCtor;
@@ -533,6 +541,7 @@ class InputRecordSchema : SchemaBase
     mixin genDumper;
 }
 
+///
 class InputEnumSchema : SchemaBase
 {
     /**
@@ -547,7 +556,9 @@ class InputEnumSchema : SchemaBase
      * A short, human-readable label of this object.
      */
     SumType!(None, string) label_;
+    ///
     @id SumType!(None, string) name_;
+    ///
     SumType!(None, CommandLineBinding) inputBinding_;
 
     mixin genCtor;
@@ -555,6 +566,7 @@ class InputEnumSchema : SchemaBase
     mixin genDumper;
 }
 
+///
 class InputArraySchema : SchemaBase
 {
     /**
@@ -569,6 +581,7 @@ class InputArraySchema : SchemaBase
      * A short, human-readable label of this object.
      */
     SumType!(None, string) label_;
+    ///
     SumType!(None, CommandLineBinding) inputBinding_;
 
     mixin genCtor;
@@ -576,6 +589,7 @@ class InputArraySchema : SchemaBase
     mixin genDumper;
 }
 
+///
 class OutputRecordField : SchemaBase
 {
     /**
@@ -590,6 +604,7 @@ class OutputRecordField : SchemaBase
      * The field type
      */
     @typeDSL SumType!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string, SumType!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string)[]) type_;
+    ///
     SumType!(None, CommandOutputBinding) outputBinding_;
 
     mixin genCtor;
@@ -597,6 +612,7 @@ class OutputRecordField : SchemaBase
     mixin genDumper;
 }
 
+///
 class OutputRecordSchema : SchemaBase
 {
     /**
@@ -617,6 +633,7 @@ class OutputRecordSchema : SchemaBase
     mixin genDumper;
 }
 
+///
 class OutputEnumSchema : SchemaBase
 {
     /**
@@ -631,6 +648,7 @@ class OutputEnumSchema : SchemaBase
      * A short, human-readable label of this object.
      */
     SumType!(None, string) label_;
+    ///
     SumType!(None, CommandOutputBinding) outputBinding_;
 
     mixin genCtor;
@@ -638,6 +656,7 @@ class OutputEnumSchema : SchemaBase
     mixin genDumper;
 }
 
+///
 class OutputArraySchema : SchemaBase
 {
     /**
@@ -652,6 +671,7 @@ class OutputArraySchema : SchemaBase
      * A short, human-readable label of this object.
      */
     SumType!(None, string) label_;
+    ///
     SumType!(None, CommandOutputBinding) outputBinding_;
 
     mixin genCtor;
@@ -659,6 +679,7 @@ class OutputArraySchema : SchemaBase
     mixin genDumper;
 }
 
+///
 class InputParameter : SchemaBase
 {
     /**
@@ -740,6 +761,7 @@ class InputParameter : SchemaBase
     mixin genDumper;
 }
 
+///
 class OutputParameter : SchemaBase
 {
     /**
@@ -1001,6 +1023,7 @@ class CommandOutputBinding : SchemaBase
     mixin genDumper;
 }
 
+///
 class CommandInputRecordField : SchemaBase
 {
     /**
@@ -1015,6 +1038,7 @@ class CommandInputRecordField : SchemaBase
      * The field type
      */
     @typeDSL SumType!(CWLType, CommandInputRecordSchema, CommandInputEnumSchema, CommandInputArraySchema, string, SumType!(CWLType, CommandInputRecordSchema, CommandInputEnumSchema, CommandInputArraySchema, string)[]) type_;
+    ///
     SumType!(None, CommandLineBinding) inputBinding_;
     /**
      * A short, human-readable label of this process object.
@@ -1026,6 +1050,7 @@ class CommandInputRecordField : SchemaBase
     mixin genDumper;
 }
 
+///
 class CommandInputRecordSchema : SchemaBase
 {
     /**
@@ -1040,6 +1065,7 @@ class CommandInputRecordSchema : SchemaBase
      * A short, human-readable label of this object.
      */
     SumType!(None, string) label_;
+    ///
     @id SumType!(None, string) name_;
 
     mixin genCtor;
@@ -1047,6 +1073,7 @@ class CommandInputRecordSchema : SchemaBase
     mixin genDumper;
 }
 
+///
 class CommandInputEnumSchema : SchemaBase
 {
     /**
@@ -1061,7 +1088,9 @@ class CommandInputEnumSchema : SchemaBase
      * A short, human-readable label of this object.
      */
     SumType!(None, string) label_;
+    ///
     @id SumType!(None, string) name_;
+    ///
     SumType!(None, CommandLineBinding) inputBinding_;
 
     mixin genCtor;
@@ -1069,6 +1098,7 @@ class CommandInputEnumSchema : SchemaBase
     mixin genDumper;
 }
 
+///
 class CommandInputArraySchema : SchemaBase
 {
     /**
@@ -1083,6 +1113,7 @@ class CommandInputArraySchema : SchemaBase
      * A short, human-readable label of this object.
      */
     SumType!(None, string) label_;
+    ///
     SumType!(None, CommandLineBinding) inputBinding_;
 
     mixin genCtor;
@@ -1090,6 +1121,7 @@ class CommandInputArraySchema : SchemaBase
     mixin genDumper;
 }
 
+///
 class CommandOutputRecordField : SchemaBase
 {
     /**
@@ -1104,6 +1136,7 @@ class CommandOutputRecordField : SchemaBase
      * The field type
      */
     @typeDSL SumType!(CWLType, CommandOutputRecordSchema, CommandOutputEnumSchema, CommandOutputArraySchema, string, SumType!(CWLType, CommandOutputRecordSchema, CommandOutputEnumSchema, CommandOutputArraySchema, string)[]) type_;
+    ///
     SumType!(None, CommandOutputBinding) outputBinding_;
 
     mixin genCtor;
@@ -1111,6 +1144,7 @@ class CommandOutputRecordField : SchemaBase
     mixin genDumper;
 }
 
+///
 class CommandOutputRecordSchema : SchemaBase
 {
     /**
@@ -1125,6 +1159,7 @@ class CommandOutputRecordSchema : SchemaBase
      * A short, human-readable label of this object.
      */
     SumType!(None, string) label_;
+    ///
     @id SumType!(None, string) name_;
 
     mixin genCtor;
@@ -1132,6 +1167,7 @@ class CommandOutputRecordSchema : SchemaBase
     mixin genDumper;
 }
 
+///
 class CommandOutputEnumSchema : SchemaBase
 {
     /**
@@ -1146,6 +1182,7 @@ class CommandOutputEnumSchema : SchemaBase
      * A short, human-readable label of this object.
      */
     SumType!(None, string) label_;
+    ///
     SumType!(None, CommandOutputBinding) outputBinding_;
 
     mixin genCtor;
@@ -1153,6 +1190,7 @@ class CommandOutputEnumSchema : SchemaBase
     mixin genDumper;
 }
 
+///
 class CommandOutputArraySchema : SchemaBase
 {
     /**
@@ -1167,6 +1205,7 @@ class CommandOutputArraySchema : SchemaBase
      * A short, human-readable label of this object.
      */
     SumType!(None, string) label_;
+    ///
     SumType!(None, CommandOutputBinding) outputBinding_;
 
     mixin genCtor;
@@ -1492,6 +1531,7 @@ class stderr : SchemaBase
      * required for a Process embedded inside another Process.
      */
     SumType!(None, CWLVersion) cwlVersion_;
+    ///
     static immutable class_ = "CommandLineTool";
     /**
      * Specifies the program to execute.  If an array, the first element of
@@ -1646,6 +1686,7 @@ class SoftwareRequirement : SchemaBase
     mixin genDumper;
 }
 
+///
 class SoftwarePackage : SchemaBase
 {
     /**
@@ -1878,6 +1919,7 @@ class ResourceRequirement : SchemaBase
     mixin genDumper;
 }
 
+///
 class ExpressionToolOutputParameter : SchemaBase
 {
     /**
@@ -2005,6 +2047,7 @@ class ExpressionToolOutputParameter : SchemaBase
      * required for a Process embedded inside another Process.
      */
     SumType!(None, CWLVersion) cwlVersion_;
+    ///
     static immutable class_ = "ExpressionTool";
     /**
      * The expression to execute.  The expression must return a JSON object which
@@ -2332,6 +2375,7 @@ class WorkflowStep : SchemaBase
      * Specifies the process to run.
      */
     @link SumType!(string, CommandLineTool, ExpressionTool, Workflow) run_;
+    ///
     @link SumType!(None, string, string[]) scatter_;
     /**
      * Required if `scatter` is an array of more than one element.
@@ -2433,6 +2477,7 @@ class WorkflowStep : SchemaBase
      * required for a Process embedded inside another Process.
      */
     SumType!(None, CWLVersion) cwlVersion_;
+    ///
     static immutable class_ = "Workflow";
     /**
      * The individual steps that make up the workflow.  Each step is executed when all of its
@@ -2510,3 +2555,9 @@ class StepInputExpressionRequirement : SchemaBase
     mixin genIdentifier;
     mixin genDumper;
 }
+
+///
+alias DocumentRootType = SumType!(CommandLineTool, ExpressionTool, Workflow);
+
+///
+alias importFromURI = import_!DocumentRootType;

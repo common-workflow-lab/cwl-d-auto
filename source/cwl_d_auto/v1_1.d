@@ -3,7 +3,7 @@
  *
  * Date: 2022-11-09
  */
-module cwl_d_auto.v1_0;
+module cwl_d_auto.v1_1;
 
 import salad.meta.dumper : genDumper;
 import salad.meta.impl : genCtor, genIdentifier, genOpEq;
@@ -13,7 +13,7 @@ import salad.primitives : SchemaBase;
 import salad.type : None, Either;
 
 /// parser information
-enum parserInfo = "CWL v1.0 parser generated with schema-salad-tool";
+enum parserInfo = "CWL v1.1 parser generated with schema-salad-tool";
 
 /**
  * Salad data types are based on Avro schema declarations.  Refer to the
@@ -56,13 +56,13 @@ public import salad.primitives : Any;
 class RecordField : SchemaBase
 {
     /**
+     * A documentation string for this object, or an array of strings which should be concatenated.
+     */
+    Either!(None, string, string[]) doc_;
+    /**
      * The name of the field
      */
     @id string name_;
-    /**
-     * A documentation string for this field
-     */
-    Either!(None, string) doc_;
     /**
      * The field type
      */
@@ -144,7 +144,9 @@ class CWLVersion : SchemaBase
         s8 = "draft-4.dev2",
         s9 = "draft-4.dev3",
         s10 = "v1.0.dev4",
-        s11 = "v1.0"
+        s11 = "v1.0",
+        s12 = "v1.1.0-dev1",
+        s13 = "v1.1"
     }
 
     Symbol value;
@@ -472,30 +474,140 @@ class Directory : SchemaBase
     mixin genDumper;
 }
 
+/**
+ * Specify the desired behavior for loading the `listing` field of
+ * a Directory object for use by expressions.
+ * no_listing: Do not load the directory listing.
+ * shallow_listing: Only load the top level listing, do not recurse into subdirectories.
+ * deep_listing: Load the directory listing and recursively load all subdirectories as well.
+ */
+class LoadListingEnum : SchemaBase
+{
+    enum Symbol
+    {
+        s0 = "no_listing",
+        s1 = "shallow_listing",
+        s2 = "deep_listing"
+    }
+
+    Symbol value;
+
+    mixin genCtor;
+    mixin genOpEq;
+    mixin genDumper;
+}
+
 ///
 public import salad.primitives : Expression;
+
+///
+class InputBinding : SchemaBase
+{
+    /**
+     * Use of `loadContents` in `InputBinding` is deprecated.
+     * Preserved for v1.0 backwards compatability.  Will be removed in
+     * CWL v2.0.  Use `InputParameter.loadContents` instead.
+     * Only valid when `type: File` or is an array of `items: File`.
+     * Read up to the first 64 KiB of text from the file and place it in the
+     * "contents" field of the file object for use by expressions.
+     */
+    Either!(None, bool) loadContents_;
+
+    mixin genCtor;
+    mixin genIdentifier;
+    mixin genDumper;
+}
 
 ///
 class InputRecordField : SchemaBase
 {
     /**
+     * A documentation string for this object, or an array of strings which should be concatenated.
+     */
+    Either!(None, string, string[]) doc_;
+    /**
      * The name of the field
      */
     @id string name_;
     /**
-     * A documentation string for this field
-     */
-    Either!(None, string) doc_;
-    /**
      * The field type
      */
     @typeDSL Either!(CWLType, InputRecordSchema, InputEnumSchema, InputArraySchema, string, Either!(CWLType, InputRecordSchema, InputEnumSchema, InputArraySchema, string)[]) type_;
-    ///
-    Either!(None, CommandLineBinding) inputBinding_;
     /**
-     * A short, human-readable label of this process object.
+     * A short, human-readable label of this object.
      */
     Either!(None, string) label_;
+    /**
+     * Only valid when `type: File` or is an array of `items: File`.
+     * Provides a pattern or expression specifying files or
+     * directories that should be included alongside the primary
+     * file.  Secondary files may be required or optional.  When not
+     * explicitly specified, secondary files specified for `inputs`
+     * are required and `outputs` are optional.  An implementation
+     * must include matching Files and Directories in the
+     * `secondaryFiles` property of the primary file.  These Files
+     * and Directories must be transferred and staged alongside the
+     * primary file.  An implementation may fail workflow execution
+     * if a required secondary file does not exist.
+     * If the value is an expression, the value of `self` in the expression
+     * must be the primary input or output File object to which this binding
+     * applies.  The `basename`, `nameroot` and `nameext` fields must be
+     * present in `self`.  For `CommandLineTool` outputs the `path` field must
+     * also be present.  The expression must return a filename string relative
+     * to the path to the primary File, a File or Directory object with either
+     * `path` or `location` and `basename` fields set, or an array consisting
+     * of strings or File or Directory objects.  It is legal to reference an
+     * unchanged File or Directory object taken from input as a secondaryFile.
+     * The expression may return "null" in which case there is no secondaryFile
+     * from that expression.
+     * To work on non-filename-preserving storage systems, portable tool
+     * descriptions should avoid constructing new values from `location`, but
+     * should construct relative references using `basename` or `nameroot`
+     * instead.
+     * If a value in `secondaryFiles` is a string that is not an expression,
+     * it specifies that the following pattern should be applied to the path
+     * of the primary file to yield a filename relative to the primary File:
+     *   1. If string ends with `?` character, remove the last `?` and mark
+     *     the resulting secondary file as optional.
+     *   2. If string begins with one or more caret `^` characters, for each
+     *     caret, remove the last file extension from the path (the last
+     *     period `.` and all following characters).  If there are no file
+     *     extensions, the path is unchanged.
+     *   3. Append the remainder of the string to the end of the file path.
+     */
+    Either!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
+    /**
+     * Only valid when `type: File` or is an array of `items: File`.
+     * A value of `true` indicates that the file is read or written
+     * sequentially without seeking.  An implementation may use this flag to
+     * indicate whether it is valid to stream file contents using a named
+     * pipe.  Default: `false`.
+     */
+    Either!(None, bool) streamable_;
+    /**
+     * Only valid when `type: File` or is an array of `items: File`.
+     * This must be one or more IRIs of concept nodes
+     * that represents file formats which are allowed as input to this
+     * parameter, preferrably defined within an ontology.  If no ontology is
+     * available, file formats may be tested by exact match.
+     */
+    @link Either!(None, string, string[], Expression) format_;
+    /**
+     * Only valid when `type: File` or is an array of `items: File`.
+     * Read up to the first 64 KiB of text from the file and place it in the
+     * "contents" field of the file object for use by expressions.
+     */
+    Either!(None, bool) loadContents_;
+    /**
+     * Only valid when `type: Directory` or is an array of `items: Directory`.
+     * Specify the desired behavior for loading the `listing` field of
+     * a Directory object for use by expressions.
+     * The order of precedence for loadListing is:
+     *   1. `loadListing` on an individual parameter
+     *   2. Inherited from `LoadListingRequirement`
+     *   3. By default: `no_listing`
+     */
+    Either!(None, LoadListingEnum) loadListing_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -517,7 +629,13 @@ class InputRecordSchema : SchemaBase
      * A short, human-readable label of this object.
      */
     Either!(None, string) label_;
-    ///
+    /**
+     * A documentation string for this object, or an array of strings which should be concatenated.
+     */
+    Either!(None, string, string[]) doc_;
+    /**
+     * The identifier for this type
+     */
     @id Either!(None, string) name_;
 
     mixin genCtor;
@@ -540,10 +658,14 @@ class InputEnumSchema : SchemaBase
      * A short, human-readable label of this object.
      */
     Either!(None, string) label_;
-    ///
+    /**
+     * A documentation string for this object, or an array of strings which should be concatenated.
+     */
+    Either!(None, string, string[]) doc_;
+    /**
+     * The identifier for this type
+     */
     @id Either!(None, string) name_;
-    ///
-    Either!(None, CommandLineBinding) inputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -565,8 +687,14 @@ class InputArraySchema : SchemaBase
      * A short, human-readable label of this object.
      */
     Either!(None, string) label_;
-    ///
-    Either!(None, CommandLineBinding) inputBinding_;
+    /**
+     * A documentation string for this object, or an array of strings which should be concatenated.
+     */
+    Either!(None, string, string[]) doc_;
+    /**
+     * The identifier for this type
+     */
+    @id Either!(None, string) name_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -577,19 +705,74 @@ class InputArraySchema : SchemaBase
 class OutputRecordField : SchemaBase
 {
     /**
+     * A documentation string for this object, or an array of strings which should be concatenated.
+     */
+    Either!(None, string, string[]) doc_;
+    /**
      * The name of the field
      */
     @id string name_;
     /**
-     * A documentation string for this field
-     */
-    Either!(None, string) doc_;
-    /**
      * The field type
      */
     @typeDSL Either!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string, Either!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string)[]) type_;
-    ///
-    Either!(None, CommandOutputBinding) outputBinding_;
+    /**
+     * A short, human-readable label of this object.
+     */
+    Either!(None, string) label_;
+    /**
+     * Only valid when `type: File` or is an array of `items: File`.
+     * Provides a pattern or expression specifying files or
+     * directories that should be included alongside the primary
+     * file.  Secondary files may be required or optional.  When not
+     * explicitly specified, secondary files specified for `inputs`
+     * are required and `outputs` are optional.  An implementation
+     * must include matching Files and Directories in the
+     * `secondaryFiles` property of the primary file.  These Files
+     * and Directories must be transferred and staged alongside the
+     * primary file.  An implementation may fail workflow execution
+     * if a required secondary file does not exist.
+     * If the value is an expression, the value of `self` in the expression
+     * must be the primary input or output File object to which this binding
+     * applies.  The `basename`, `nameroot` and `nameext` fields must be
+     * present in `self`.  For `CommandLineTool` outputs the `path` field must
+     * also be present.  The expression must return a filename string relative
+     * to the path to the primary File, a File or Directory object with either
+     * `path` or `location` and `basename` fields set, or an array consisting
+     * of strings or File or Directory objects.  It is legal to reference an
+     * unchanged File or Directory object taken from input as a secondaryFile.
+     * The expression may return "null" in which case there is no secondaryFile
+     * from that expression.
+     * To work on non-filename-preserving storage systems, portable tool
+     * descriptions should avoid constructing new values from `location`, but
+     * should construct relative references using `basename` or `nameroot`
+     * instead.
+     * If a value in `secondaryFiles` is a string that is not an expression,
+     * it specifies that the following pattern should be applied to the path
+     * of the primary file to yield a filename relative to the primary File:
+     *   1. If string ends with `?` character, remove the last `?` and mark
+     *     the resulting secondary file as optional.
+     *   2. If string begins with one or more caret `^` characters, for each
+     *     caret, remove the last file extension from the path (the last
+     *     period `.` and all following characters).  If there are no file
+     *     extensions, the path is unchanged.
+     *   3. Append the remainder of the string to the end of the file path.
+     */
+    Either!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
+    /**
+     * Only valid when `type: File` or is an array of `items: File`.
+     * A value of `true` indicates that the file is read or written
+     * sequentially without seeking.  An implementation may use this flag to
+     * indicate whether it is valid to stream file contents using a named
+     * pipe.  Default: `false`.
+     */
+    Either!(None, bool) streamable_;
+    /**
+     * Only valid when `type: File` or is an array of `items: File`.
+     * This is the file format that will be assigned to the output
+     * File object.
+     */
+    @link Either!(None, string, Expression) format_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -611,6 +794,14 @@ class OutputRecordSchema : SchemaBase
      * A short, human-readable label of this object.
      */
     Either!(None, string) label_;
+    /**
+     * A documentation string for this object, or an array of strings which should be concatenated.
+     */
+    Either!(None, string, string[]) doc_;
+    /**
+     * The identifier for this type
+     */
+    @id Either!(None, string) name_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -632,8 +823,14 @@ class OutputEnumSchema : SchemaBase
      * A short, human-readable label of this object.
      */
     Either!(None, string) label_;
-    ///
-    Either!(None, CommandOutputBinding) outputBinding_;
+    /**
+     * A documentation string for this object, or an array of strings which should be concatenated.
+     */
+    Either!(None, string, string[]) doc_;
+    /**
+     * The identifier for this type
+     */
+    @id Either!(None, string) name_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -655,158 +852,14 @@ class OutputArraySchema : SchemaBase
      * A short, human-readable label of this object.
      */
     Either!(None, string) label_;
-    ///
-    Either!(None, CommandOutputBinding) outputBinding_;
-
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
-}
-
-///
-class InputParameter : SchemaBase
-{
     /**
-     * A short, human-readable label of this object.
-     */
-    Either!(None, string) label_;
-    /**
-     * Only valid when `type: File` or is an array of `items: File`.
-     * Provides a pattern or expression specifying files or directories that
-     * must be included alongside the primary file.  All listed secondary
-     * files must be present.  An implementation may fail workflow execution
-     * if an expected secondary file does not exist.
-     * If the value is an expression, the value of `self` in the expression
-     * must be the primary input or output File object to which this binding
-     * applies.  The `basename`, `nameroot` and `nameext` fields must be
-     * present in `self`.  For `CommandLineTool` outputs the `path` field must
-     * also be present.  The expression must return a filename string relative
-     * to the path to the primary File, a File or Directory object with either
-     * `path` or `location` and `basename` fields set, or an array consisting
-     * of strings or File or Directory objects.  It is legal to reference an
-     * unchanged File or Directory object taken from input as a secondaryFile.
-     * To work on non-filename-preserving storage systems, portable tool
-     * descriptions should avoid constructing new values from `location`, but
-     * should construct relative references using `basename` or `nameroot`
-     * instead.
-     * If a value in `secondaryFiles` is a string that is not an expression,
-     * it specifies that the following pattern should be applied to the path
-     * of the primary file to yield a filename relative to the primary File:
-     *   1. If string begins with one or more caret `^` characters, for each
-     *     caret, remove the last file extension from the path (the last
-     *     period `.` and all following characters).  If there are no file
-     *     extensions, the path is unchanged.
-     *   2. Append the remainder of the string to the end of the file path.
-     */
-    Either!(None, string, Expression, Either!(string, Expression)[]) secondaryFiles_;
-    /**
-     * Only valid when `type: File` or is an array of `items: File`.
-     * A value of `true` indicates that the file is read or written
-     * sequentially without seeking.  An implementation may use this flag to
-     * indicate whether it is valid to stream file contents using a named
-     * pipe.  Default: `false`.
-     */
-    Either!(None, bool) streamable_;
-    /**
-     * A documentation string for this type, or an array of strings which should be concatenated.
+     * A documentation string for this object, or an array of strings which should be concatenated.
      */
     Either!(None, string, string[]) doc_;
     /**
-     * The unique identifier for this parameter object.
+     * The identifier for this type
      */
-    @id string id_;
-    /**
-     * Only valid when `type: File` or is an array of `items: File`.
-     * This must be one or more IRIs of concept nodes
-     * that represents file formats which are allowed as input to this
-     * parameter, preferrably defined within an ontology.  If no ontology is
-     * available, file formats may be tested by exact match.
-     */
-    @link Either!(None, string, string[], Expression) format_;
-    /**
-     * Describes how to handle the inputs of a process and convert them
-     * into a concrete form for execution, such as command line parameters.
-     */
-    Either!(None, CommandLineBinding) inputBinding_;
-    /**
-     * The default value to use for this parameter if the parameter is missing
-     * from the input object, or if the value of the parameter in the input
-     * object is `null`.  Default values are applied before evaluating expressions
-     * (e.g. dependent `valueFrom` fields).
-     */
-    Either!(None, Any) default_;
-    /**
-     * Specify valid types of data that may be assigned to this parameter.
-     */
-    @typeDSL Either!(None, CWLType, InputRecordSchema, InputEnumSchema, InputArraySchema, string, Either!(CWLType, InputRecordSchema, InputEnumSchema, InputArraySchema, string)[]) type_;
-
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
-}
-
-///
-class OutputParameter : SchemaBase
-{
-    /**
-     * A short, human-readable label of this object.
-     */
-    Either!(None, string) label_;
-    /**
-     * Only valid when `type: File` or is an array of `items: File`.
-     * Provides a pattern or expression specifying files or directories that
-     * must be included alongside the primary file.  All listed secondary
-     * files must be present.  An implementation may fail workflow execution
-     * if an expected secondary file does not exist.
-     * If the value is an expression, the value of `self` in the expression
-     * must be the primary input or output File object to which this binding
-     * applies.  The `basename`, `nameroot` and `nameext` fields must be
-     * present in `self`.  For `CommandLineTool` outputs the `path` field must
-     * also be present.  The expression must return a filename string relative
-     * to the path to the primary File, a File or Directory object with either
-     * `path` or `location` and `basename` fields set, or an array consisting
-     * of strings or File or Directory objects.  It is legal to reference an
-     * unchanged File or Directory object taken from input as a secondaryFile.
-     * To work on non-filename-preserving storage systems, portable tool
-     * descriptions should avoid constructing new values from `location`, but
-     * should construct relative references using `basename` or `nameroot`
-     * instead.
-     * If a value in `secondaryFiles` is a string that is not an expression,
-     * it specifies that the following pattern should be applied to the path
-     * of the primary file to yield a filename relative to the primary File:
-     *   1. If string begins with one or more caret `^` characters, for each
-     *     caret, remove the last file extension from the path (the last
-     *     period `.` and all following characters).  If there are no file
-     *     extensions, the path is unchanged.
-     *   2. Append the remainder of the string to the end of the file path.
-     */
-    Either!(None, string, Expression, Either!(string, Expression)[]) secondaryFiles_;
-    /**
-     * Only valid when `type: File` or is an array of `items: File`.
-     * A value of `true` indicates that the file is read or written
-     * sequentially without seeking.  An implementation may use this flag to
-     * indicate whether it is valid to stream file contents using a named
-     * pipe.  Default: `false`.
-     */
-    Either!(None, bool) streamable_;
-    /**
-     * A documentation string for this type, or an array of strings which should be concatenated.
-     */
-    Either!(None, string, string[]) doc_;
-    /**
-     * The unique identifier for this parameter object.
-     */
-    @id string id_;
-    /**
-     * Describes how to handle the outputs of a process.
-     */
-    Either!(None, CommandOutputBinding) outputBinding_;
-    /**
-     * Only valid when `type: File` or is an array of `items: File`.
-     * This is the file format that will be assigned to
-     * the output parameter.
-     */
-    @link Either!(None, string, Expression) format_;
+    @id Either!(None, string) name_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -854,7 +907,71 @@ class SchemaDefRequirement : SchemaBase
     /**
      * The list of type definitions.
      */
-    Either!(InputRecordSchema, InputEnumSchema, InputArraySchema)[] types_;
+    Either!(CommandInputRecordSchema, CommandInputEnumSchema, CommandInputArraySchema)[] types_;
+
+    mixin genCtor;
+    mixin genIdentifier;
+    mixin genDumper;
+}
+
+///
+class SecondaryFileSchema : SchemaBase
+{
+    /**
+     * Provides a pattern or expression specifying files or directories that
+     * should be included alongside the primary file.
+     * If the value is an expression, the value of `self` in the expression
+     * must be the primary input or output File object to which this binding
+     * applies.  The `basename`, `nameroot` and `nameext` fields must be
+     * present in `self`.  For `CommandLineTool` outputs the `path` field must
+     * also be present.  The expression must return a filename string relative
+     * to the path to the primary File, a File or Directory object with either
+     * `path` or `location` and `basename` fields set, or an array consisting
+     * of strings or File or Directory objects.  It is legal to reference an
+     * unchanged File or Directory object taken from input as a secondaryFile.
+     * The expression may return "null" in which case there is no secondaryFile
+     * from that expression.
+     * To work on non-filename-preserving storage systems, portable tool
+     * descriptions should avoid constructing new values from `location`, but
+     * should construct relative references using `basename` or `nameroot`
+     * instead.
+     * If a value in `secondaryFiles` is a string that is not an expression,
+     * it specifies that the following pattern should be applied to the path
+     * of the primary file to yield a filename relative to the primary File:
+     *   1. If string ends with `?` character, remove the last `?` and mark
+     *     the resulting secondary file as optional.
+     *   2. If string begins with one or more caret `^` characters, for each
+     *     caret, remove the last file extension from the path (the last
+     *     period `.` and all following characters).  If there are no file
+     *     extensions, the path is unchanged.
+     *   3. Append the remainder of the string to the end of the file path.
+     */
+    Either!(string, Expression) pattern_;
+    /**
+     * An implementation must not fail workflow execution if `required` is
+     * set to `false` and the expected secondary file does not exist.
+     * Default value for `required` field is `true` for secondary files on
+     * input and `false` for secondary files on output.
+     */
+    Either!(None, bool, Expression) required_;
+
+    mixin genCtor;
+    mixin genIdentifier;
+    mixin genDumper;
+}
+
+/**
+ * Specify the desired behavior for loading the `listing` field of
+ * a Directory object for use by expressions.
+ */
+class LoadListingRequirement : SchemaBase
+{
+    /**
+     * Always 'LoadListingRequirement'
+     */
+    static immutable class_ = "LoadListingRequirement";
+    ///
+    Either!(None, LoadListingEnum) loadListing_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -912,15 +1029,23 @@ class EnvironmentDef : SchemaBase
 class CommandLineBinding : SchemaBase
 {
     /**
+     * Use of `loadContents` in `InputBinding` is deprecated.
+     * Preserved for v1.0 backwards compatability.  Will be removed in
+     * CWL v2.0.  Use `InputParameter.loadContents` instead.
      * Only valid when `type: File` or is an array of `items: File`.
      * Read up to the first 64 KiB of text from the file and place it in the
      * "contents" field of the file object for use by expressions.
      */
     Either!(None, bool) loadContents_;
     /**
-     * The sorting key.  Default position is 0.
+     * The sorting key.  Default position is 0. If the inputBinding is
+     * associated with an input parameter, then the value of `self` in the
+     * expression will be the value of the input parameter.  Input parameter
+     * defaults (as specified by the `InputParameter.default` field) must be
+     * applied before evaluating the expression. Expressions must return a
+     * single value of type int or a null.
      */
-    Either!(None, int) position_;
+    Either!(None, int, Expression) position_;
     /**
      * Command line prefix to add before the value.
      */
@@ -946,6 +1071,8 @@ class CommandLineBinding : SchemaBase
      * the input parameter.  Input parameter defaults (as specified by the
      * `InputParameter.default` field) must be applied before evaluating the
      * expression.
+     * If the value of the associated input parameter is `null`, `valueFrom` is
+     * not evaluated and nothing is added to the command line.
      * When a binding is part of the `CommandLineTool.arguments` field,
      * the `valueFrom` field is required.
      */
@@ -977,30 +1104,80 @@ class CommandLineBinding : SchemaBase
 class CommandOutputBinding : SchemaBase
 {
     /**
-     * Find files relative to the output directory, using POSIX glob(3)
-     * pathname matching.  If an array is provided, find files that match any
-     * pattern in the array.  If an expression is provided, the expression must
-     * return a string or an array of strings, which will then be evaluated as
-     * one or more glob patterns.  Must only match and return files which
-     * actually exist.
-     */
-    Either!(None, string, Expression, string[]) glob_;
-    /**
-     * For each file matched in `glob`, read up to
-     * the first 64 KiB of text from the file and place it in the `contents`
-     * field of the file object for manipulation by `outputEval`.
+     * Only valid when `type: File` or is an array of `items: File`.
+     * Read up to the first 64 KiB of text from the file and place it in the
+     * "contents" field of the file object for use by expressions.
      */
     Either!(None, bool) loadContents_;
     /**
-     * Evaluate an expression to generate the output value.  If `glob` was
-     * specified, the value of `self` must be an array containing file objects
-     * that were matched.  If no files were matched, `self` must be a zero
-     * length array; if a single file was matched, the value of `self` is an
-     * array of a single element.  Additionally, if `loadContents` is `true`,
-     * the File objects must include up to the first 64 KiB of file contents
-     * in the `contents` field.
+     * Only valid when `type: Directory` or is an array of `items: Directory`.
+     * Specify the desired behavior for loading the `listing` field of
+     * a Directory object for use by expressions.
+     * The order of precedence for loadListing is:
+     *   1. `loadListing` on an individual parameter
+     *   2. Inherited from `LoadListingRequirement`
+     *   3. By default: `no_listing`
      */
-    Either!(None, string, Expression) outputEval_;
+    Either!(None, LoadListingEnum) loadListing_;
+    /**
+     * Find files or directories relative to the output directory, using POSIX
+     * glob(3) pathname matching.  If an array is provided, find files or
+     * directories that match any pattern in the array.  If an expression is
+     * provided, the expression must return a string or an array of strings,
+     * which will then be evaluated as one or more glob patterns.  Must only
+     * match and return files/directories which actually exist.
+     * If the value of glob is a relative path pattern (does not
+     * begin with a slash '/') then it is resolved relative to the
+     * output directory.  If the value of the glob is an absolute
+     * path pattern (it does begin with a slash '/') then it must
+     * refer to a path within the output directory.  It is an error
+     * if any glob resolves to a path outside the output directory.
+     * Specifically this means globs that resolve to paths outside the output
+     * directory are illegal.
+     * A glob may match a path within the output directory which is
+     * actually a symlink to another file.  In this case, the
+     * expected behavior is for the resulting File/Directory object to take the
+     * `basename` (and corresponding `nameroot` and `nameext`) of the
+     * symlink.  The `location` of the File/Directory is implementation
+     * dependent, but logically the File/Directory should have the same content
+     * as the symlink target.  Platforms may stage output files/directories to
+     * cloud storage that lack the concept of a symlink.  In
+     * this case file content and directories may be duplicated, or (to avoid
+     * duplication) the File/Directory `location` may refer to the symlink
+     * target.
+     * It is an error if a symlink in the output directory (or any
+     * symlink in a chain of links) refers to any file or directory
+     * that is not under an input or output directory.
+     * Implementations may shut down a container before globbing
+     * output, so globs and expressions must not assume access to the
+     * container filesystem except for declared input and output.
+     */
+    Either!(None, string, Expression, string[]) glob_;
+    /**
+     * Evaluate an expression to generate the output value.  If
+     * `glob` was specified, the value of `self` must be an array
+     * containing file objects that were matched.  If no files were
+     * matched, `self` must be a zero length array; if a single file
+     * was matched, the value of `self` is an array of a single
+     * element.  Additionally, if `loadContents` is `true`, the File
+     * objects must include up to the first 64 KiB of file contents
+     * in the `contents` field.  The exit code of the process is
+     * available in the expression as `runtime.exitCode`.
+     */
+    Either!(None, Expression) outputEval_;
+
+    mixin genCtor;
+    mixin genIdentifier;
+    mixin genDumper;
+}
+
+///
+class CommandLineBindable : SchemaBase
+{
+    /**
+     * Describes how to turn this object into command line arguments.
+     */
+    Either!(None, CommandLineBinding) inputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1011,23 +1188,96 @@ class CommandOutputBinding : SchemaBase
 class CommandInputRecordField : SchemaBase
 {
     /**
+     * A documentation string for this object, or an array of strings which should be concatenated.
+     */
+    Either!(None, string, string[]) doc_;
+    /**
      * The name of the field
      */
     @id string name_;
     /**
-     * A documentation string for this field
-     */
-    Either!(None, string) doc_;
-    /**
      * The field type
      */
     @typeDSL Either!(CWLType, CommandInputRecordSchema, CommandInputEnumSchema, CommandInputArraySchema, string, Either!(CWLType, CommandInputRecordSchema, CommandInputEnumSchema, CommandInputArraySchema, string)[]) type_;
-    ///
-    Either!(None, CommandLineBinding) inputBinding_;
     /**
-     * A short, human-readable label of this process object.
+     * A short, human-readable label of this object.
      */
     Either!(None, string) label_;
+    /**
+     * Only valid when `type: File` or is an array of `items: File`.
+     * Provides a pattern or expression specifying files or
+     * directories that should be included alongside the primary
+     * file.  Secondary files may be required or optional.  When not
+     * explicitly specified, secondary files specified for `inputs`
+     * are required and `outputs` are optional.  An implementation
+     * must include matching Files and Directories in the
+     * `secondaryFiles` property of the primary file.  These Files
+     * and Directories must be transferred and staged alongside the
+     * primary file.  An implementation may fail workflow execution
+     * if a required secondary file does not exist.
+     * If the value is an expression, the value of `self` in the expression
+     * must be the primary input or output File object to which this binding
+     * applies.  The `basename`, `nameroot` and `nameext` fields must be
+     * present in `self`.  For `CommandLineTool` outputs the `path` field must
+     * also be present.  The expression must return a filename string relative
+     * to the path to the primary File, a File or Directory object with either
+     * `path` or `location` and `basename` fields set, or an array consisting
+     * of strings or File or Directory objects.  It is legal to reference an
+     * unchanged File or Directory object taken from input as a secondaryFile.
+     * The expression may return "null" in which case there is no secondaryFile
+     * from that expression.
+     * To work on non-filename-preserving storage systems, portable tool
+     * descriptions should avoid constructing new values from `location`, but
+     * should construct relative references using `basename` or `nameroot`
+     * instead.
+     * If a value in `secondaryFiles` is a string that is not an expression,
+     * it specifies that the following pattern should be applied to the path
+     * of the primary file to yield a filename relative to the primary File:
+     *   1. If string ends with `?` character, remove the last `?` and mark
+     *     the resulting secondary file as optional.
+     *   2. If string begins with one or more caret `^` characters, for each
+     *     caret, remove the last file extension from the path (the last
+     *     period `.` and all following characters).  If there are no file
+     *     extensions, the path is unchanged.
+     *   3. Append the remainder of the string to the end of the file path.
+     */
+    Either!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
+    /**
+     * Only valid when `type: File` or is an array of `items: File`.
+     * A value of `true` indicates that the file is read or written
+     * sequentially without seeking.  An implementation may use this flag to
+     * indicate whether it is valid to stream file contents using a named
+     * pipe.  Default: `false`.
+     */
+    Either!(None, bool) streamable_;
+    /**
+     * Only valid when `type: File` or is an array of `items: File`.
+     * This must be one or more IRIs of concept nodes
+     * that represents file formats which are allowed as input to this
+     * parameter, preferrably defined within an ontology.  If no ontology is
+     * available, file formats may be tested by exact match.
+     */
+    @link Either!(None, string, string[], Expression) format_;
+    /**
+     * Only valid when `type: File` or is an array of `items: File`.
+     * Read up to the first 64 KiB of text from the file and place it in the
+     * "contents" field of the file object for use by expressions.
+     */
+    Either!(None, bool) loadContents_;
+    /**
+     * Only valid when `type: Directory` or is an array of `items: Directory`.
+     * Specify the desired behavior for loading the `listing` field of
+     * a Directory object for use by expressions.
+     * The order of precedence for loadListing is:
+     *   1. `loadListing` on an individual parameter
+     *   2. Inherited from `LoadListingRequirement`
+     *   3. By default: `no_listing`
+     */
+    Either!(None, LoadListingEnum) loadListing_;
+    /**
+     * Describes how to turn this object into command line arguments.
+     */
+    Either!(None, CommandLineBinding) inputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1049,8 +1299,18 @@ class CommandInputRecordSchema : SchemaBase
      * A short, human-readable label of this object.
      */
     Either!(None, string) label_;
-    ///
+    /**
+     * A documentation string for this object, or an array of strings which should be concatenated.
+     */
+    Either!(None, string, string[]) doc_;
+    /**
+     * The identifier for this type
+     */
     @id Either!(None, string) name_;
+    /**
+     * Describes how to turn this object into command line arguments.
+     */
+    Either!(None, CommandLineBinding) inputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1072,9 +1332,17 @@ class CommandInputEnumSchema : SchemaBase
      * A short, human-readable label of this object.
      */
     Either!(None, string) label_;
-    ///
+    /**
+     * A documentation string for this object, or an array of strings which should be concatenated.
+     */
+    Either!(None, string, string[]) doc_;
+    /**
+     * The identifier for this type
+     */
     @id Either!(None, string) name_;
-    ///
+    /**
+     * Describes how to turn this object into command line arguments.
+     */
     Either!(None, CommandLineBinding) inputBinding_;
 
     mixin genCtor;
@@ -1097,7 +1365,17 @@ class CommandInputArraySchema : SchemaBase
      * A short, human-readable label of this object.
      */
     Either!(None, string) label_;
-    ///
+    /**
+     * A documentation string for this object, or an array of strings which should be concatenated.
+     */
+    Either!(None, string, string[]) doc_;
+    /**
+     * The identifier for this type
+     */
+    @id Either!(None, string) name_;
+    /**
+     * Describes how to turn this object into command line arguments.
+     */
     Either!(None, CommandLineBinding) inputBinding_;
 
     mixin genCtor;
@@ -1109,18 +1387,78 @@ class CommandInputArraySchema : SchemaBase
 class CommandOutputRecordField : SchemaBase
 {
     /**
+     * A documentation string for this object, or an array of strings which should be concatenated.
+     */
+    Either!(None, string, string[]) doc_;
+    /**
      * The name of the field
      */
     @id string name_;
     /**
-     * A documentation string for this field
-     */
-    Either!(None, string) doc_;
-    /**
      * The field type
      */
     @typeDSL Either!(CWLType, CommandOutputRecordSchema, CommandOutputEnumSchema, CommandOutputArraySchema, string, Either!(CWLType, CommandOutputRecordSchema, CommandOutputEnumSchema, CommandOutputArraySchema, string)[]) type_;
-    ///
+    /**
+     * A short, human-readable label of this object.
+     */
+    Either!(None, string) label_;
+    /**
+     * Only valid when `type: File` or is an array of `items: File`.
+     * Provides a pattern or expression specifying files or
+     * directories that should be included alongside the primary
+     * file.  Secondary files may be required or optional.  When not
+     * explicitly specified, secondary files specified for `inputs`
+     * are required and `outputs` are optional.  An implementation
+     * must include matching Files and Directories in the
+     * `secondaryFiles` property of the primary file.  These Files
+     * and Directories must be transferred and staged alongside the
+     * primary file.  An implementation may fail workflow execution
+     * if a required secondary file does not exist.
+     * If the value is an expression, the value of `self` in the expression
+     * must be the primary input or output File object to which this binding
+     * applies.  The `basename`, `nameroot` and `nameext` fields must be
+     * present in `self`.  For `CommandLineTool` outputs the `path` field must
+     * also be present.  The expression must return a filename string relative
+     * to the path to the primary File, a File or Directory object with either
+     * `path` or `location` and `basename` fields set, or an array consisting
+     * of strings or File or Directory objects.  It is legal to reference an
+     * unchanged File or Directory object taken from input as a secondaryFile.
+     * The expression may return "null" in which case there is no secondaryFile
+     * from that expression.
+     * To work on non-filename-preserving storage systems, portable tool
+     * descriptions should avoid constructing new values from `location`, but
+     * should construct relative references using `basename` or `nameroot`
+     * instead.
+     * If a value in `secondaryFiles` is a string that is not an expression,
+     * it specifies that the following pattern should be applied to the path
+     * of the primary file to yield a filename relative to the primary File:
+     *   1. If string ends with `?` character, remove the last `?` and mark
+     *     the resulting secondary file as optional.
+     *   2. If string begins with one or more caret `^` characters, for each
+     *     caret, remove the last file extension from the path (the last
+     *     period `.` and all following characters).  If there are no file
+     *     extensions, the path is unchanged.
+     *   3. Append the remainder of the string to the end of the file path.
+     */
+    Either!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
+    /**
+     * Only valid when `type: File` or is an array of `items: File`.
+     * A value of `true` indicates that the file is read or written
+     * sequentially without seeking.  An implementation may use this flag to
+     * indicate whether it is valid to stream file contents using a named
+     * pipe.  Default: `false`.
+     */
+    Either!(None, bool) streamable_;
+    /**
+     * Only valid when `type: File` or is an array of `items: File`.
+     * This is the file format that will be assigned to the output
+     * File object.
+     */
+    @link Either!(None, string, Expression) format_;
+    /**
+     * Describes how to generate this output object based on the files
+     * produced by a CommandLineTool
+     */
     Either!(None, CommandOutputBinding) outputBinding_;
 
     mixin genCtor;
@@ -1143,7 +1481,13 @@ class CommandOutputRecordSchema : SchemaBase
      * A short, human-readable label of this object.
      */
     Either!(None, string) label_;
-    ///
+    /**
+     * A documentation string for this object, or an array of strings which should be concatenated.
+     */
+    Either!(None, string, string[]) doc_;
+    /**
+     * The identifier for this type
+     */
     @id Either!(None, string) name_;
 
     mixin genCtor;
@@ -1166,8 +1510,14 @@ class CommandOutputEnumSchema : SchemaBase
      * A short, human-readable label of this object.
      */
     Either!(None, string) label_;
-    ///
-    Either!(None, CommandOutputBinding) outputBinding_;
+    /**
+     * A documentation string for this object, or an array of strings which should be concatenated.
+     */
+    Either!(None, string, string[]) doc_;
+    /**
+     * The identifier for this type
+     */
+    @id Either!(None, string) name_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1189,8 +1539,14 @@ class CommandOutputArraySchema : SchemaBase
      * A short, human-readable label of this object.
      */
     Either!(None, string) label_;
-    ///
-    Either!(None, CommandOutputBinding) outputBinding_;
+    /**
+     * A documentation string for this object, or an array of strings which should be concatenated.
+     */
+    Either!(None, string, string[]) doc_;
+    /**
+     * The identifier for this type
+     */
+    @id Either!(None, string) name_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1208,10 +1564,16 @@ class CommandInputParameter : SchemaBase
     Either!(None, string) label_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
-     * Provides a pattern or expression specifying files or directories that
-     * must be included alongside the primary file.  All listed secondary
-     * files must be present.  An implementation may fail workflow execution
-     * if an expected secondary file does not exist.
+     * Provides a pattern or expression specifying files or
+     * directories that should be included alongside the primary
+     * file.  Secondary files may be required or optional.  When not
+     * explicitly specified, secondary files specified for `inputs`
+     * are required and `outputs` are optional.  An implementation
+     * must include matching Files and Directories in the
+     * `secondaryFiles` property of the primary file.  These Files
+     * and Directories must be transferred and staged alongside the
+     * primary file.  An implementation may fail workflow execution
+     * if a required secondary file does not exist.
      * If the value is an expression, the value of `self` in the expression
      * must be the primary input or output File object to which this binding
      * applies.  The `basename`, `nameroot` and `nameext` fields must be
@@ -1221,6 +1583,8 @@ class CommandInputParameter : SchemaBase
      * `path` or `location` and `basename` fields set, or an array consisting
      * of strings or File or Directory objects.  It is legal to reference an
      * unchanged File or Directory object taken from input as a secondaryFile.
+     * The expression may return "null" in which case there is no secondaryFile
+     * from that expression.
      * To work on non-filename-preserving storage systems, portable tool
      * descriptions should avoid constructing new values from `location`, but
      * should construct relative references using `basename` or `nameroot`
@@ -1228,13 +1592,15 @@ class CommandInputParameter : SchemaBase
      * If a value in `secondaryFiles` is a string that is not an expression,
      * it specifies that the following pattern should be applied to the path
      * of the primary file to yield a filename relative to the primary File:
-     *   1. If string begins with one or more caret `^` characters, for each
+     *   1. If string ends with `?` character, remove the last `?` and mark
+     *     the resulting secondary file as optional.
+     *   2. If string begins with one or more caret `^` characters, for each
      *     caret, remove the last file extension from the path (the last
      *     period `.` and all following characters).  If there are no file
      *     extensions, the path is unchanged.
-     *   2. Append the remainder of the string to the end of the file path.
+     *   3. Append the remainder of the string to the end of the file path.
      */
-    Either!(None, string, Expression, Either!(string, Expression)[]) secondaryFiles_;
+    Either!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * A value of `true` indicates that the file is read or written
@@ -1244,13 +1610,13 @@ class CommandInputParameter : SchemaBase
      */
     Either!(None, bool) streamable_;
     /**
-     * A documentation string for this type, or an array of strings which should be concatenated.
+     * A documentation string for this object, or an array of strings which should be concatenated.
      */
     Either!(None, string, string[]) doc_;
     /**
-     * The unique identifier for this parameter object.
+     * The unique identifier for this object.
      */
-    @id string id_;
+    @id Either!(None, string) id_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * This must be one or more IRIs of concept nodes
@@ -1260,21 +1626,37 @@ class CommandInputParameter : SchemaBase
      */
     @link Either!(None, string, string[], Expression) format_;
     /**
-     * Describes how to handle the inputs of a process and convert them
-     * into a concrete form for execution, such as command line parameters.
+     * Only valid when `type: File` or is an array of `items: File`.
+     * Read up to the first 64 KiB of text from the file and place it in the
+     * "contents" field of the file object for use by expressions.
      */
-    Either!(None, CommandLineBinding) inputBinding_;
+    Either!(None, bool) loadContents_;
+    /**
+     * Only valid when `type: Directory` or is an array of `items: Directory`.
+     * Specify the desired behavior for loading the `listing` field of
+     * a Directory object for use by expressions.
+     * The order of precedence for loadListing is:
+     *   1. `loadListing` on an individual parameter
+     *   2. Inherited from `LoadListingRequirement`
+     *   3. By default: `no_listing`
+     */
+    Either!(None, LoadListingEnum) loadListing_;
     /**
      * The default value to use for this parameter if the parameter is missing
      * from the input object, or if the value of the parameter in the input
      * object is `null`.  Default values are applied before evaluating expressions
      * (e.g. dependent `valueFrom` fields).
      */
-    Either!(None, Any) default_;
+    Either!(None, File, Directory, Any) default_;
     /**
      * Specify valid types of data that may be assigned to this parameter.
      */
-    @typeDSL Either!(None, CWLType, CommandInputRecordSchema, CommandInputEnumSchema, CommandInputArraySchema, string, Either!(CWLType, CommandInputRecordSchema, CommandInputEnumSchema, CommandInputArraySchema, string)[]) type_;
+    @typeDSL Either!(CWLType, stdin, CommandInputRecordSchema, CommandInputEnumSchema, CommandInputArraySchema, string, Either!(CWLType, CommandInputRecordSchema, CommandInputEnumSchema, CommandInputArraySchema, string)[]) type_;
+    /**
+     * Describes how to turns the input parameters of a process into
+     * command line arguments.
+     */
+    Either!(None, CommandLineBinding) inputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1292,10 +1674,16 @@ class CommandOutputParameter : SchemaBase
     Either!(None, string) label_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
-     * Provides a pattern or expression specifying files or directories that
-     * must be included alongside the primary file.  All listed secondary
-     * files must be present.  An implementation may fail workflow execution
-     * if an expected secondary file does not exist.
+     * Provides a pattern or expression specifying files or
+     * directories that should be included alongside the primary
+     * file.  Secondary files may be required or optional.  When not
+     * explicitly specified, secondary files specified for `inputs`
+     * are required and `outputs` are optional.  An implementation
+     * must include matching Files and Directories in the
+     * `secondaryFiles` property of the primary file.  These Files
+     * and Directories must be transferred and staged alongside the
+     * primary file.  An implementation may fail workflow execution
+     * if a required secondary file does not exist.
      * If the value is an expression, the value of `self` in the expression
      * must be the primary input or output File object to which this binding
      * applies.  The `basename`, `nameroot` and `nameext` fields must be
@@ -1305,6 +1693,8 @@ class CommandOutputParameter : SchemaBase
      * `path` or `location` and `basename` fields set, or an array consisting
      * of strings or File or Directory objects.  It is legal to reference an
      * unchanged File or Directory object taken from input as a secondaryFile.
+     * The expression may return "null" in which case there is no secondaryFile
+     * from that expression.
      * To work on non-filename-preserving storage systems, portable tool
      * descriptions should avoid constructing new values from `location`, but
      * should construct relative references using `basename` or `nameroot`
@@ -1312,13 +1702,15 @@ class CommandOutputParameter : SchemaBase
      * If a value in `secondaryFiles` is a string that is not an expression,
      * it specifies that the following pattern should be applied to the path
      * of the primary file to yield a filename relative to the primary File:
-     *   1. If string begins with one or more caret `^` characters, for each
+     *   1. If string ends with `?` character, remove the last `?` and mark
+     *     the resulting secondary file as optional.
+     *   2. If string begins with one or more caret `^` characters, for each
      *     caret, remove the last file extension from the path (the last
      *     period `.` and all following characters).  If there are no file
      *     extensions, the path is unchanged.
-     *   2. Append the remainder of the string to the end of the file path.
+     *   3. Append the remainder of the string to the end of the file path.
      */
-    Either!(None, string, Expression, Either!(string, Expression)[]) secondaryFiles_;
+    Either!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * A value of `true` indicates that the file is read or written
@@ -1328,30 +1720,63 @@ class CommandOutputParameter : SchemaBase
      */
     Either!(None, bool) streamable_;
     /**
-     * A documentation string for this type, or an array of strings which should be concatenated.
+     * A documentation string for this object, or an array of strings which should be concatenated.
      */
     Either!(None, string, string[]) doc_;
     /**
-     * The unique identifier for this parameter object.
+     * The unique identifier for this object.
      */
-    @id string id_;
-    /**
-     * Describes how to handle the outputs of a process.
-     */
-    Either!(None, CommandOutputBinding) outputBinding_;
+    @id Either!(None, string) id_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
-     * This is the file format that will be assigned to
-     * the output parameter.
+     * This is the file format that will be assigned to the output
+     * File object.
      */
     @link Either!(None, string, Expression) format_;
     /**
      * Specify valid types of data that may be assigned to this parameter.
      */
-    @typeDSL Either!(None, CWLType, stdout, stderr, CommandOutputRecordSchema, CommandOutputEnumSchema, CommandOutputArraySchema, string, Either!(CWLType, CommandOutputRecordSchema, CommandOutputEnumSchema, CommandOutputArraySchema, string)[]) type_;
+    @typeDSL Either!(CWLType, stdout, stderr, CommandOutputRecordSchema, CommandOutputEnumSchema, CommandOutputArraySchema, string, Either!(CWLType, CommandOutputRecordSchema, CommandOutputEnumSchema, CommandOutputArraySchema, string)[]) type_;
+    /**
+     * Describes how to generate this output object based on the files produced by a CommandLineTool
+     */
+    Either!(None, CommandOutputBinding) outputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
+    mixin genDumper;
+}
+
+/**
+ * Only valid as a `type` for a `CommandLineTool` input with no
+ * `inputBinding` set. `stdin` must not be specified at the `CommandLineTool`
+ * level.
+ * The following
+ * ```
+ * inputs:
+ *    an_input_name:
+ *    type: stdin
+ * ```
+ * is equivalent to
+ * ```
+ * inputs:
+ *   an_input_name:
+ *     type: File
+ *     streamable: true
+ * stdin: ${inputs.an_input_name.path}
+ * ```
+ */
+class stdin : SchemaBase
+{
+    enum Symbol
+    {
+        s0 = "stdin"
+    }
+
+    Symbol value;
+
+    mixin genCtor;
+    mixin genOpEq;
     mixin genDumper;
 }
 
@@ -1465,9 +1890,17 @@ class stderr : SchemaBase
 @documentRoot class CommandLineTool : SchemaBase
 {
     /**
-     * The unique identifier for this process object.
+     * The unique identifier for this object.
      */
     @id Either!(None, string) id_;
+    /**
+     * A short, human-readable label of this object.
+     */
+    Either!(None, string) label_;
+    /**
+     * A documentation string for this object, or an array of strings which should be concatenated.
+     */
+    Either!(None, string, string[]) doc_;
     /**
      * Defines the input parameters of the process.  The process is ready to
      * run when all required input parameters are associated with concrete
@@ -1494,22 +1927,14 @@ class stderr : SchemaBase
      * error and the implementation must not attempt to run the process,
      * unless overridden at user option.
      */
-    @idMap("class") Either!(None, Either!(InlineJavascriptRequirement, SchemaDefRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement)[]) requirements_;
+    @idMap("class") Either!(None, Either!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement)[]) requirements_;
     /**
      * Declares hints applying to either the runtime environment or the
      * workflow engine that may be helpful in executing this process.  It is
      * not an error if an implementation cannot satisfy all hints, however
      * the implementation may report a warning.
      */
-    @idMap("class") Either!(None, Any[]) hints_;
-    /**
-     * A short, human-readable label of this process object.
-     */
-    Either!(None, string) label_;
-    /**
-     * A long, human-readable description of this process object.
-     */
-    Either!(None, string) doc_;
+    @idMap("class") Either!(None, Either!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement, Any)[]) hints_;
     /**
      * CWL document version. Always required at the document root. Not
      * required for a Process embedded inside another Process.
@@ -1534,7 +1959,10 @@ class stderr : SchemaBase
      */
     Either!(None, string, string[]) baseCommand_;
     /**
-     * Command line bindings which are not directly associated with input parameters.
+     * Command line bindings which are not directly associated with input
+     * parameters. If the value is a string, it is used as a string literal
+     * argument. If it is an Expression, the result of the evaluation is used
+     * as an argument.
      */
     Either!(None, Either!(string, Expression, CommandLineBinding)[]) arguments_;
     /**
@@ -1584,8 +2012,9 @@ class stderr : SchemaBase
 
 /**
  * Indicates that a workflow component should be run in a
- * [Docker](http://docker.com) container, and specifies how to fetch or build
- * the image.
+ * [Docker](http://docker.com) or Docker-compatible (such as
+ * [Singularity](https://www.sylabs.io/) and [udocker](https://github.com/indigo-dc/udocker)) container environment and
+ * specifies how to fetch or build the image.
  * If a CommandLineTool lists `DockerRequirement` under
  * `hints` (or `requirements`), it may (or must) be run in the specified Docker
  * container.
@@ -1598,12 +2027,27 @@ class stderr : SchemaBase
  * file paths in the input object to correspond to the Docker bind mounted
  * locations. That is, the platform should rewrite values in the parameter context
  * such as `runtime.outdir`, `runtime.tmpdir` and others to be valid paths
- * within the container.
+ * within the container. The platform must ensure that `runtime.outdir` and
+ * `runtime.tmpdir` are distinct directories.
  * When running a tool contained in Docker, the workflow platform must not
  * assume anything about the contents of the Docker container, such as the
  * presence or absence of specific software, except to assume that the
  * generated command line represents a valid command within the runtime
  * environment of the container.
+ * A container image may specify an
+ * [ENTRYPOINT](https://docs.docker.com/engine/reference/builder/#entrypoint)
+ * and/or
+ * [CMD](https://docs.docker.com/engine/reference/builder/#cmd).
+ * Command line arguments will be appended after all elements of
+ * ENTRYPOINT, and will override all elements specified using CMD (in
+ * other words, CMD is only used when the CommandLineTool definition
+ * produces an empty command line).
+ * Use of implicit ENTRYPOINT or CMD are discouraged due to reproducibility
+ * concerns of the implicit hidden execution point (For further discussion, see
+ * [https://doi.org/10.12688/f1000research.15140.1](https://doi.org/10.12688/f1000research.15140.1)). Portable
+ * CommandLineTool wrappers in which use of a container is optional must not rely on ENTRYPOINT or CMD.
+ * CommandLineTools which do rely on ENTRYPOINT or CMD must list `DockerRequirement` in the
+ * `requirements` section.
  * ## Interaction with other requirements
  * If [EnvVarRequirement](#EnvVarRequirement) is specified alongside a
  * DockerRequirement, the environment variables must be provided to Docker
@@ -1617,7 +2061,9 @@ class DockerRequirement : SchemaBase
      */
     static immutable class_ = "DockerRequirement";
     /**
-     * Specify a Docker image to retrieve using `docker pull`.
+     * Specify a Docker image to retrieve using `docker pull`. Can contain the
+     * immutable digest to ensure an exact container is used:
+     * `dockerPull: ubuntu@sha256:45b23dee08af5e43a7fea6c4cf9c25ccf269ee113168c19722f87876677c5cb2`
      */
     Either!(None, string) dockerPull_;
     /**
@@ -1723,7 +2169,7 @@ class SoftwarePackage : SchemaBase
      * software IRIs should be left out of shared CWL descriptions to avoid
      * clutter.
      */
-    Either!(None, string[]) specs_;
+    @link Either!(None, string[]) specs_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1786,8 +2232,8 @@ class InitialWorkDirRequirement : SchemaBase
     /**
      * The list of files or subdirectories that must be placed in the
      * designated output directory prior to executing the command line tool.
-     * May be an expression.  If so, the expression return value must validate
-     * as `{type: array, items: [File, Directory]}`.
+     * May be an expression. If so, the expression return value must validate as
+     * `{type: array, items: ["null", File, File[], Directory, Directory[], Dirent]}`.
      * Files or Directories which are listed in the input parameters and
      * appear in the `InitialWorkDirRequirement` listing must have their
      * `path` set to their staged location in the designated output directory.
@@ -1795,7 +2241,7 @@ class InitialWorkDirRequirement : SchemaBase
      * `InitialWorkDirRequirement` listing, the implementation must choose
      * exactly one value for `path`; how this value is chosen is undefined.
      */
-    Either!(Either!(File, Directory, Dirent, string, Expression)[], string, Expression) listing_;
+    Either!(Either!(None, File, Either!(File, Directory)[], Directory, Dirent, Expression)[], Expression) listing_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1857,7 +2303,7 @@ class ShellCommandRequirement : SchemaBase
  * If "max" is specified by "min" is not, then "min" == "max".
  * It is an error if max < min.
  * It is an error if the value of any of these fields is negative.
- * If neither "min" nor "max" is specified for a resource, an implementation may provide a default.
+ * If neither "min" nor "max" is specified for a resource, use the default values below.
  */
 class ResourceRequirement : SchemaBase
 {
@@ -1866,37 +2312,156 @@ class ResourceRequirement : SchemaBase
      */
     static immutable class_ = "ResourceRequirement";
     /**
-     * Minimum reserved number of CPU cores
+     * Minimum reserved number of CPU cores (default is 1)
      */
-    Either!(None, long, string, Expression) coresMin_;
+    Either!(None, long, Expression) coresMin_;
     /**
      * Maximum reserved number of CPU cores
      */
-    Either!(None, int, string, Expression) coresMax_;
+    Either!(None, int, Expression) coresMax_;
     /**
-     * Minimum reserved RAM in mebibytes (2**20)
+     * Minimum reserved RAM in mebibytes (2**20) (default is 256)
      */
-    Either!(None, long, string, Expression) ramMin_;
+    Either!(None, long, Expression) ramMin_;
     /**
      * Maximum reserved RAM in mebibytes (2**20)
      */
-    Either!(None, long, string, Expression) ramMax_;
+    Either!(None, long, Expression) ramMax_;
     /**
-     * Minimum reserved filesystem based storage for the designated temporary directory, in mebibytes (2**20)
+     * Minimum reserved filesystem based storage for the designated temporary directory, in mebibytes (2**20) (default is 1024)
      */
-    Either!(None, long, string, Expression) tmpdirMin_;
+    Either!(None, long, Expression) tmpdirMin_;
     /**
      * Maximum reserved filesystem based storage for the designated temporary directory, in mebibytes (2**20)
      */
-    Either!(None, long, string, Expression) tmpdirMax_;
+    Either!(None, long, Expression) tmpdirMax_;
     /**
-     * Minimum reserved filesystem based storage for the designated output directory, in mebibytes (2**20)
+     * Minimum reserved filesystem based storage for the designated output directory, in mebibytes (2**20) (default is 1024)
      */
-    Either!(None, long, string, Expression) outdirMin_;
+    Either!(None, long, Expression) outdirMin_;
     /**
      * Maximum reserved filesystem based storage for the designated output directory, in mebibytes (2**20)
      */
-    Either!(None, long, string, Expression) outdirMax_;
+    Either!(None, long, Expression) outdirMax_;
+
+    mixin genCtor;
+    mixin genIdentifier;
+    mixin genDumper;
+}
+
+/**
+ * For implementations that support reusing output from past work (on
+ * the assumption that same code and same input produce same
+ * results), control whether to enable or disable the reuse behavior
+ * for a particular tool or step (to accomodate situations where that
+ * assumption is incorrect).  A reused step is not executed but
+ * instead returns the same output as the original execution.
+ * If `enableReuse` is not specified, correct tools should assume it
+ * is enabled by default.
+ */
+class WorkReuse : SchemaBase
+{
+    /**
+     * Always 'WorkReuse'
+     */
+    static immutable class_ = "WorkReuse";
+    ///
+    Either!(bool, Expression) enableReuse_;
+
+    mixin genCtor;
+    mixin genIdentifier;
+    mixin genDumper;
+}
+
+/**
+ * Indicate whether a process requires outgoing IPv4/IPv6 network
+ * access.  Choice of IPv4 or IPv6 is implementation and site
+ * specific, correct tools must support both.
+ * If `networkAccess` is false or not specified, tools must not
+ * assume network access, except for localhost (the loopback device).
+ * If `networkAccess` is true, the tool must be able to make outgoing
+ * connections to network resources.  Resources may be on a private
+ * subnet or the public Internet.  However, implementations and sites
+ * may apply their own security policies to restrict what is
+ * accessible by the tool.
+ * Enabling network access does not imply a publically routable IP
+ * address or the ability to accept inbound connections.
+ */
+class NetworkAccess : SchemaBase
+{
+    /**
+     * Always 'NetworkAccess'
+     */
+    static immutable class_ = "NetworkAccess";
+    ///
+    Either!(bool, Expression) networkAccess_;
+
+    mixin genCtor;
+    mixin genIdentifier;
+    mixin genDumper;
+}
+
+/**
+ * If `inplaceUpdate` is true, then an implementation supporting this
+ * feature may permit tools to directly update files with `writable:
+ * true` in InitialWorkDirRequirement.  That is, as an optimization,
+ * files may be destructively modified in place as opposed to copied
+ * and updated.
+ * An implementation must ensure that only one workflow step may
+ * access a writable file at a time.  It is an error if a file which
+ * is writable by one workflow step file is accessed (for reading or
+ * writing) by any other workflow step running independently.
+ * However, a file which has been updated in a previous completed
+ * step may be used as input to multiple steps, provided it is
+ * read-only in every step.
+ * Workflow steps which modify a file must produce the modified file
+ * as output.  Downstream steps which futher process the file must
+ * use the output of previous steps, and not refer to a common input
+ * (this is necessary for both ordering and correctness).
+ * Workflow authors should provide this in the `hints` section.  The
+ * intent of this feature is that workflows produce the same results
+ * whether or not InplaceUpdateRequirement is supported by the
+ * implementation, and this feature is primarily available as an
+ * optimization for particular environments.
+ * Users and implementers should be aware that workflows that
+ * destructively modify inputs may not be repeatable or reproducible.
+ * In particular, enabling this feature implies that WorkReuse should
+ * not be enabled.
+ */
+class InplaceUpdateRequirement : SchemaBase
+{
+    /**
+     * Always 'InplaceUpdateRequirement'
+     */
+    static immutable class_ = "InplaceUpdateRequirement";
+    ///
+    bool inplaceUpdate_;
+
+    mixin genCtor;
+    mixin genIdentifier;
+    mixin genDumper;
+}
+
+/**
+ * Set an upper limit on the execution time of a CommandLineTool.
+ * A CommandLineTool whose execution duration exceeds the time
+ * limit may be preemptively terminated and considered failed.
+ * May also be used by batch systems to make scheduling decisions.
+ * The execution duration excludes external operations, such as
+ * staging of files, pulling a docker image etc, and only counts
+ * wall-time for the execution of the command line itself.
+ */
+class ToolTimeLimit : SchemaBase
+{
+    /**
+     * Always 'ToolTimeLimit'
+     */
+    static immutable class_ = "ToolTimeLimit";
+    /**
+     * The time limit, in seconds.  A time limit of zero means no
+     * time limit.  Negative time limits are an error.
+     */
+    Either!(long, Expression) timelimit_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1912,10 +2477,16 @@ class ExpressionToolOutputParameter : SchemaBase
     Either!(None, string) label_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
-     * Provides a pattern or expression specifying files or directories that
-     * must be included alongside the primary file.  All listed secondary
-     * files must be present.  An implementation may fail workflow execution
-     * if an expected secondary file does not exist.
+     * Provides a pattern or expression specifying files or
+     * directories that should be included alongside the primary
+     * file.  Secondary files may be required or optional.  When not
+     * explicitly specified, secondary files specified for `inputs`
+     * are required and `outputs` are optional.  An implementation
+     * must include matching Files and Directories in the
+     * `secondaryFiles` property of the primary file.  These Files
+     * and Directories must be transferred and staged alongside the
+     * primary file.  An implementation may fail workflow execution
+     * if a required secondary file does not exist.
      * If the value is an expression, the value of `self` in the expression
      * must be the primary input or output File object to which this binding
      * applies.  The `basename`, `nameroot` and `nameext` fields must be
@@ -1925,6 +2496,8 @@ class ExpressionToolOutputParameter : SchemaBase
      * `path` or `location` and `basename` fields set, or an array consisting
      * of strings or File or Directory objects.  It is legal to reference an
      * unchanged File or Directory object taken from input as a secondaryFile.
+     * The expression may return "null" in which case there is no secondaryFile
+     * from that expression.
      * To work on non-filename-preserving storage systems, portable tool
      * descriptions should avoid constructing new values from `location`, but
      * should construct relative references using `basename` or `nameroot`
@@ -1932,13 +2505,15 @@ class ExpressionToolOutputParameter : SchemaBase
      * If a value in `secondaryFiles` is a string that is not an expression,
      * it specifies that the following pattern should be applied to the path
      * of the primary file to yield a filename relative to the primary File:
-     *   1. If string begins with one or more caret `^` characters, for each
+     *   1. If string ends with `?` character, remove the last `?` and mark
+     *     the resulting secondary file as optional.
+     *   2. If string begins with one or more caret `^` characters, for each
      *     caret, remove the last file extension from the path (the last
      *     period `.` and all following characters).  If there are no file
      *     extensions, the path is unchanged.
-     *   2. Append the remainder of the string to the end of the file path.
+     *   3. Append the remainder of the string to the end of the file path.
      */
-    Either!(None, string, Expression, Either!(string, Expression)[]) secondaryFiles_;
+    Either!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * A value of `true` indicates that the file is read or written
@@ -1948,27 +2523,131 @@ class ExpressionToolOutputParameter : SchemaBase
      */
     Either!(None, bool) streamable_;
     /**
-     * A documentation string for this type, or an array of strings which should be concatenated.
+     * A documentation string for this object, or an array of strings which should be concatenated.
      */
     Either!(None, string, string[]) doc_;
     /**
-     * The unique identifier for this parameter object.
+     * The unique identifier for this object.
      */
-    @id string id_;
-    /**
-     * Describes how to handle the outputs of a process.
-     */
-    Either!(None, CommandOutputBinding) outputBinding_;
+    @id Either!(None, string) id_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
-     * This is the file format that will be assigned to
-     * the output parameter.
+     * This is the file format that will be assigned to the output
+     * File object.
      */
     @link Either!(None, string, Expression) format_;
     /**
      * Specify valid types of data that may be assigned to this parameter.
      */
-    @typeDSL Either!(None, CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string, Either!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string)[]) type_;
+    @typeDSL Either!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string, Either!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string)[]) type_;
+
+    mixin genCtor;
+    mixin genIdentifier;
+    mixin genDumper;
+}
+
+///
+class WorkflowInputParameter : SchemaBase
+{
+    /**
+     * A short, human-readable label of this object.
+     */
+    Either!(None, string) label_;
+    /**
+     * Only valid when `type: File` or is an array of `items: File`.
+     * Provides a pattern or expression specifying files or
+     * directories that should be included alongside the primary
+     * file.  Secondary files may be required or optional.  When not
+     * explicitly specified, secondary files specified for `inputs`
+     * are required and `outputs` are optional.  An implementation
+     * must include matching Files and Directories in the
+     * `secondaryFiles` property of the primary file.  These Files
+     * and Directories must be transferred and staged alongside the
+     * primary file.  An implementation may fail workflow execution
+     * if a required secondary file does not exist.
+     * If the value is an expression, the value of `self` in the expression
+     * must be the primary input or output File object to which this binding
+     * applies.  The `basename`, `nameroot` and `nameext` fields must be
+     * present in `self`.  For `CommandLineTool` outputs the `path` field must
+     * also be present.  The expression must return a filename string relative
+     * to the path to the primary File, a File or Directory object with either
+     * `path` or `location` and `basename` fields set, or an array consisting
+     * of strings or File or Directory objects.  It is legal to reference an
+     * unchanged File or Directory object taken from input as a secondaryFile.
+     * The expression may return "null" in which case there is no secondaryFile
+     * from that expression.
+     * To work on non-filename-preserving storage systems, portable tool
+     * descriptions should avoid constructing new values from `location`, but
+     * should construct relative references using `basename` or `nameroot`
+     * instead.
+     * If a value in `secondaryFiles` is a string that is not an expression,
+     * it specifies that the following pattern should be applied to the path
+     * of the primary file to yield a filename relative to the primary File:
+     *   1. If string ends with `?` character, remove the last `?` and mark
+     *     the resulting secondary file as optional.
+     *   2. If string begins with one or more caret `^` characters, for each
+     *     caret, remove the last file extension from the path (the last
+     *     period `.` and all following characters).  If there are no file
+     *     extensions, the path is unchanged.
+     *   3. Append the remainder of the string to the end of the file path.
+     */
+    Either!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
+    /**
+     * Only valid when `type: File` or is an array of `items: File`.
+     * A value of `true` indicates that the file is read or written
+     * sequentially without seeking.  An implementation may use this flag to
+     * indicate whether it is valid to stream file contents using a named
+     * pipe.  Default: `false`.
+     */
+    Either!(None, bool) streamable_;
+    /**
+     * A documentation string for this object, or an array of strings which should be concatenated.
+     */
+    Either!(None, string, string[]) doc_;
+    /**
+     * The unique identifier for this object.
+     */
+    @id Either!(None, string) id_;
+    /**
+     * Only valid when `type: File` or is an array of `items: File`.
+     * This must be one or more IRIs of concept nodes
+     * that represents file formats which are allowed as input to this
+     * parameter, preferrably defined within an ontology.  If no ontology is
+     * available, file formats may be tested by exact match.
+     */
+    @link Either!(None, string, string[], Expression) format_;
+    /**
+     * Only valid when `type: File` or is an array of `items: File`.
+     * Read up to the first 64 KiB of text from the file and place it in the
+     * "contents" field of the file object for use by expressions.
+     */
+    Either!(None, bool) loadContents_;
+    /**
+     * Only valid when `type: Directory` or is an array of `items: Directory`.
+     * Specify the desired behavior for loading the `listing` field of
+     * a Directory object for use by expressions.
+     * The order of precedence for loadListing is:
+     *   1. `loadListing` on an individual parameter
+     *   2. Inherited from `LoadListingRequirement`
+     *   3. By default: `no_listing`
+     */
+    Either!(None, LoadListingEnum) loadListing_;
+    /**
+     * The default value to use for this parameter if the parameter is missing
+     * from the input object, or if the value of the parameter in the input
+     * object is `null`.  Default values are applied before evaluating expressions
+     * (e.g. dependent `valueFrom` fields).
+     */
+    Either!(None, File, Directory, Any) default_;
+    /**
+     * Specify valid types of data that may be assigned to this parameter.
+     */
+    @typeDSL Either!(CWLType, InputRecordSchema, InputEnumSchema, InputArraySchema, string, Either!(CWLType, InputRecordSchema, InputEnumSchema, InputArraySchema, string)[]) type_;
+    /**
+     * Deprecated.  Preserved for v1.0 backwards compatability.  Will be removed in
+     * CWL v2.0.  Use `WorkflowInputParameter.loadContents` instead.
+     */
+    Either!(None, InputBinding) inputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1976,14 +2655,28 @@ class ExpressionToolOutputParameter : SchemaBase
 }
 
 /**
- * Execute an expression as a Workflow step.
+ * An ExpressionTool is a type of Process object that can be run by itself
+ * or as a Workflow step. It executes a pure Javascript expression that has
+ * access to the same input parameters as a workflow. It is meant to be used
+ * sparingly as a way to isolate complex Javascript expressions that need to
+ * operate on input data and produce some result; perhaps just a
+ * rearrangement of the inputs. No Docker software container is required
+ * or allowed.
  */
 @documentRoot class ExpressionTool : SchemaBase
 {
     /**
-     * The unique identifier for this process object.
+     * The unique identifier for this object.
      */
     @id Either!(None, string) id_;
+    /**
+     * A short, human-readable label of this object.
+     */
+    Either!(None, string) label_;
+    /**
+     * A documentation string for this object, or an array of strings which should be concatenated.
+     */
+    Either!(None, string, string[]) doc_;
     /**
      * Defines the input parameters of the process.  The process is ready to
      * run when all required input parameters are associated with concrete
@@ -1996,7 +2689,7 @@ class ExpressionToolOutputParameter : SchemaBase
      * parameter, if provided) for the purposes of validation and evaluation
      * of expressions.
      */
-    @idMap("id", "type") InputParameter[] inputs_;
+    @idMap("id", "type") WorkflowInputParameter[] inputs_;
     /**
      * Defines the parameters representing the output of the process.  May be
      * used to generate and/or validate the output object.
@@ -2010,22 +2703,14 @@ class ExpressionToolOutputParameter : SchemaBase
      * error and the implementation must not attempt to run the process,
      * unless overridden at user option.
      */
-    @idMap("class") Either!(None, Either!(InlineJavascriptRequirement, SchemaDefRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement)[]) requirements_;
+    @idMap("class") Either!(None, Either!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement)[]) requirements_;
     /**
      * Declares hints applying to either the runtime environment or the
      * workflow engine that may be helpful in executing this process.  It is
      * not an error if an implementation cannot satisfy all hints, however
      * the implementation may report a warning.
      */
-    @idMap("class") Either!(None, Any[]) hints_;
-    /**
-     * A short, human-readable label of this process object.
-     */
-    Either!(None, string) label_;
-    /**
-     * A long, human-readable description of this process object.
-     */
-    Either!(None, string) doc_;
+    @idMap("class") Either!(None, Either!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement, Any)[]) hints_;
     /**
      * CWL document version. Always required at the document root. Not
      * required for a Process embedded inside another Process.
@@ -2037,7 +2722,7 @@ class ExpressionToolOutputParameter : SchemaBase
      * The expression to execute.  The expression must return a JSON object which
      * matches the output parameters of the ExpressionTool.
      */
-    Either!(string, Expression) expression_;
+    Expression expression_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -2064,8 +2749,9 @@ class LinkMergeMethod : SchemaBase
 
 /**
  * Describe an output parameter of a workflow.  The parameter must be
- * connected to one or more parameters defined in the workflow that will
- * provide the value of the output parameter.
+ * connected to one or more parameters defined in the workflow that
+ * will provide the value of the output parameter. It is legal to
+ * connect a WorkflowInputParameter to a WorkflowOutputParameter.
  */
 class WorkflowOutputParameter : SchemaBase
 {
@@ -2075,10 +2761,16 @@ class WorkflowOutputParameter : SchemaBase
     Either!(None, string) label_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
-     * Provides a pattern or expression specifying files or directories that
-     * must be included alongside the primary file.  All listed secondary
-     * files must be present.  An implementation may fail workflow execution
-     * if an expected secondary file does not exist.
+     * Provides a pattern or expression specifying files or
+     * directories that should be included alongside the primary
+     * file.  Secondary files may be required or optional.  When not
+     * explicitly specified, secondary files specified for `inputs`
+     * are required and `outputs` are optional.  An implementation
+     * must include matching Files and Directories in the
+     * `secondaryFiles` property of the primary file.  These Files
+     * and Directories must be transferred and staged alongside the
+     * primary file.  An implementation may fail workflow execution
+     * if a required secondary file does not exist.
      * If the value is an expression, the value of `self` in the expression
      * must be the primary input or output File object to which this binding
      * applies.  The `basename`, `nameroot` and `nameext` fields must be
@@ -2088,6 +2780,8 @@ class WorkflowOutputParameter : SchemaBase
      * `path` or `location` and `basename` fields set, or an array consisting
      * of strings or File or Directory objects.  It is legal to reference an
      * unchanged File or Directory object taken from input as a secondaryFile.
+     * The expression may return "null" in which case there is no secondaryFile
+     * from that expression.
      * To work on non-filename-preserving storage systems, portable tool
      * descriptions should avoid constructing new values from `location`, but
      * should construct relative references using `basename` or `nameroot`
@@ -2095,13 +2789,15 @@ class WorkflowOutputParameter : SchemaBase
      * If a value in `secondaryFiles` is a string that is not an expression,
      * it specifies that the following pattern should be applied to the path
      * of the primary file to yield a filename relative to the primary File:
-     *   1. If string begins with one or more caret `^` characters, for each
+     *   1. If string ends with `?` character, remove the last `?` and mark
+     *     the resulting secondary file as optional.
+     *   2. If string begins with one or more caret `^` characters, for each
      *     caret, remove the last file extension from the path (the last
      *     period `.` and all following characters).  If there are no file
      *     extensions, the path is unchanged.
-     *   2. Append the remainder of the string to the end of the file path.
+     *   3. Append the remainder of the string to the end of the file path.
      */
-    Either!(None, string, Expression, Either!(string, Expression)[]) secondaryFiles_;
+    Either!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * A value of `true` indicates that the file is read or written
@@ -2111,21 +2807,17 @@ class WorkflowOutputParameter : SchemaBase
      */
     Either!(None, bool) streamable_;
     /**
-     * A documentation string for this type, or an array of strings which should be concatenated.
+     * A documentation string for this object, or an array of strings which should be concatenated.
      */
     Either!(None, string, string[]) doc_;
     /**
-     * The unique identifier for this parameter object.
+     * The unique identifier for this object.
      */
-    @id string id_;
-    /**
-     * Describes how to handle the outputs of a process.
-     */
-    Either!(None, CommandOutputBinding) outputBinding_;
+    @id Either!(None, string) id_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
-     * This is the file format that will be assigned to
-     * the output parameter.
+     * This is the file format that will be assigned to the output
+     * File object.
      */
     @link Either!(None, string, Expression) format_;
     /**
@@ -2141,7 +2833,7 @@ class WorkflowOutputParameter : SchemaBase
     /**
      * Specify valid types of data that may be assigned to this parameter.
      */
-    @typeDSL Either!(None, CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string, Either!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string)[]) type_;
+    @typeDSL Either!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string, Either!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string)[]) type_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -2151,7 +2843,11 @@ class WorkflowOutputParameter : SchemaBase
 /**
  * The input of a workflow step connects an upstream parameter (from the
  * workflow inputs, or the outputs of other workflows steps) with the input
- * parameters of the underlying step.
+ * parameters of the process specified by the `run` field. Only input parameters
+ * declared by the target process will be passed through at runtime to the process
+ * though additonal parameters may be specified (for use within `valueFrom`
+ * expressions for instance) - unconnected or unused parameters do not represent an
+ * error condition.
  * ## Input object
  * A WorkflowStepInput object must contain an `id` field in the form
  * `#fieldname` or `#prefix/fieldname`.  When the `id` field contains a slash
@@ -2183,6 +2879,10 @@ class WorkflowOutputParameter : SchemaBase
 class WorkflowStepInput : SchemaBase
 {
     /**
+     * The unique identifier for this object.
+     */
+    @id Either!(None, string) id_;
+    /**
      * Specifies one or more workflow parameters that will provide input to
      * the underlying step parameter.
      */
@@ -2193,15 +2893,31 @@ class WorkflowStepInput : SchemaBase
      */
     Either!(None, LinkMergeMethod) linkMerge_;
     /**
-     * A unique identifier for this workflow input parameter.
+     * Only valid when `type: File` or is an array of `items: File`.
+     * Read up to the first 64 KiB of text from the file and place it in the
+     * "contents" field of the file object for use by expressions.
      */
-    @id string id_;
+    Either!(None, bool) loadContents_;
+    /**
+     * Only valid when `type: Directory` or is an array of `items: Directory`.
+     * Specify the desired behavior for loading the `listing` field of
+     * a Directory object for use by expressions.
+     * The order of precedence for loadListing is:
+     *   1. `loadListing` on an individual parameter
+     *   2. Inherited from `LoadListingRequirement`
+     *   3. By default: `no_listing`
+     */
+    Either!(None, LoadListingEnum) loadListing_;
+    /**
+     * A short, human-readable label of this object.
+     */
+    Either!(None, string) label_;
     /**
      * The default value for this parameter to use if either there is no
      * `source` field, or the value produced by the `source` is `null`.  The
      * default must be applied prior to scattering or evaluating `valueFrom`.
      */
-    Either!(None, Any) default_;
+    Either!(None, File, Directory, Any) default_;
     /**
      * To use valueFrom, [StepInputExpressionRequirement](#StepInputExpressionRequirement) must
      * be specified in the workflow or workflow step requirements.
@@ -2213,7 +2929,7 @@ class WorkflowStepInput : SchemaBase
      * 1. `null` if there is no `source` field
      * 2. the value of the parameter(s) specified in the `source` field when this
      * workflow input parameter **is not** specified in this workflow step's `scatter` field.
-     * 3. an element of the parameter specified in the `source` field when this workflow input 
+     * 3. an element of the parameter specified in the `source` field when this workflow input
      * parameter **is** specified in this workflow step's `scatter` field.
      * The value of `inputs` in the parameter reference or expression must be
      * the input object to the workflow step after assigning the `source`
@@ -2234,15 +2950,16 @@ class WorkflowStepInput : SchemaBase
  * parameter.  The workflow parameter (given in the `id` field) be may be used
  * as a `source` to connect with input parameters of other workflow steps, or
  * with an output parameter of the process.
+ * A unique identifier for this workflow output parameter.  This is
+ * the identifier to use in the `source` field of `WorkflowStepInput`
+ * to connect the output value to downstream parameters.
  */
 class WorkflowStepOutput : SchemaBase
 {
     /**
-     * A unique identifier for this workflow output parameter.  This is the
-     * identifier to use in the `source` field of `WorkflowStepInput` to
-     * connect the output value to downstream parameters.
+     * The unique identifier for this object.
      */
-    @id string id_;
+    @id Either!(None, string) id_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -2315,9 +3032,17 @@ class ScatterMethod : SchemaBase
 class WorkflowStep : SchemaBase
 {
     /**
-     * The unique identifier for this workflow step.
+     * The unique identifier for this object.
      */
-    @id string id_;
+    @id Either!(None, string) id_;
+    /**
+     * A short, human-readable label of this object.
+     */
+    Either!(None, string) label_;
+    /**
+     * A documentation string for this object, or an array of strings which should be concatenated.
+     */
+    Either!(None, string, string[]) doc_;
     /**
      * Defines the input parameters of the workflow step.  The process is ready to
      * run when all required input parameters are associated with concrete
@@ -2339,7 +3064,7 @@ class WorkflowStep : SchemaBase
      * error and the implementation must not attempt to run the process,
      * unless overridden at user option.
      */
-    @idMap("class") Either!(None, Either!(InlineJavascriptRequirement, SchemaDefRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement)[]) requirements_;
+    @idMap("class") Either!(None, Either!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement)[]) requirements_;
     /**
      * Declares hints applying to either the runtime environment or the
      * workflow engine that may be helpful in executing this workflow step.  It is
@@ -2347,14 +3072,6 @@ class WorkflowStep : SchemaBase
      * the implementation may report a warning.
      */
     @idMap("class") Either!(None, Any[]) hints_;
-    /**
-     * A short, human-readable label of this process object.
-     */
-    Either!(None, string) label_;
-    /**
-     * A long, human-readable description of this process object.
-     */
-    Either!(None, string) doc_;
     /**
      * Specifies the process to run.
      */
@@ -2411,9 +3128,17 @@ class WorkflowStep : SchemaBase
 @documentRoot class Workflow : SchemaBase
 {
     /**
-     * The unique identifier for this process object.
+     * The unique identifier for this object.
      */
     @id Either!(None, string) id_;
+    /**
+     * A short, human-readable label of this object.
+     */
+    Either!(None, string) label_;
+    /**
+     * A documentation string for this object, or an array of strings which should be concatenated.
+     */
+    Either!(None, string, string[]) doc_;
     /**
      * Defines the input parameters of the process.  The process is ready to
      * run when all required input parameters are associated with concrete
@@ -2426,7 +3151,7 @@ class WorkflowStep : SchemaBase
      * parameter, if provided) for the purposes of validation and evaluation
      * of expressions.
      */
-    @idMap("id", "type") InputParameter[] inputs_;
+    @idMap("id", "type") WorkflowInputParameter[] inputs_;
     /**
      * Defines the parameters representing the output of the process.  May be
      * used to generate and/or validate the output object.
@@ -2440,22 +3165,14 @@ class WorkflowStep : SchemaBase
      * error and the implementation must not attempt to run the process,
      * unless overridden at user option.
      */
-    @idMap("class") Either!(None, Either!(InlineJavascriptRequirement, SchemaDefRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement)[]) requirements_;
+    @idMap("class") Either!(None, Either!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement)[]) requirements_;
     /**
      * Declares hints applying to either the runtime environment or the
      * workflow engine that may be helpful in executing this process.  It is
      * not an error if an implementation cannot satisfy all hints, however
      * the implementation may report a warning.
      */
-    @idMap("class") Either!(None, Any[]) hints_;
-    /**
-     * A short, human-readable label of this process object.
-     */
-    Either!(None, string) label_;
-    /**
-     * A long, human-readable description of this process object.
-     */
-    Either!(None, string) doc_;
+    @idMap("class") Either!(None, Either!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement, Any)[]) hints_;
     /**
      * CWL document version. Always required at the document root. Not
      * required for a Process embedded inside another Process.

@@ -59,3 +59,19 @@ writefln!"%s is %s class."(uri, classStr);
 ///// Convert CWL object to YAML node
 auto yamlNode = doc.match!(d => Node(d));
 ```
+
+### How to run the example
+The example just prints the document class of a given CWL document.
+
+```console
+$ dub run -- ./download-sra.cwl
+...
+file:///workspaces/cwl-d-auto/download-sra.cwl is CommandLineTool class.
+```
+
+## How to test
+TODO: Add tests!
+
+```console
+$ dub test
+```

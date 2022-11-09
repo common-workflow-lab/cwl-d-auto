@@ -13,7 +13,7 @@ It integrates with [schema-salad-d](https://github.com/tom-tan/schema-salad-d) a
 It is generated with [schema-salad-tool](https://github.com/common-workflow-language/schema_salad) as shown below.
 
 ```console
-$ schema-salad-tool --codegen dlang cwl-v1.0/v1.0/CommonWorkflowLanguage.yml --codegen-package cwl_d_auto.v1_0 --codegen-parser-info "CWL v1.0 parser generated with schema-salad-tool" > v1_0.d
+$ schema-salad-tool --codegen dlang https://github.com/common-workflow-language/common-workflow-language/raw/codegen/v1.0/CommonWorkflowLanguage.yml --codegen-package cwl_d_auto.v1_0 --codegen-parser-info "CWL v1.0 parser generated with schema-salad-tool" > v1_0.d
 ```
 
 - You can specify the package name via `--codegen-package`.

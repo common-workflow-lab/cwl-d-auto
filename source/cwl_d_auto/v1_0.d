@@ -10,7 +10,7 @@ import salad.meta.impl : genCtor, genIdentifier, genOpEq;
 import salad.meta.parser : import_ = importFromURI;
 import salad.meta.uda : documentRoot, id, idMap, link, typeDSL;
 import salad.primitives : SchemaBase;
-import salad.type : None, Optional, SumType;
+import salad.type : None, SumType;
 
 /// parser information
 enum parserInfo = "CWL v1.0 parser generated with schema-salad-tool";
@@ -47,6 +47,7 @@ class PrimitiveType : SchemaBase
     mixin genDumper;
 }
 
+///
 public import salad.primitives : Any;
 
 /**

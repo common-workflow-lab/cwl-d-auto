@@ -3262,3 +3262,22 @@ alias DocumentRootType = Either!(CommandLineTool, ExpressionTool, Workflow);
 
 ///
 alias importFromURI = import_!DocumentRootType;
+
+@("Test for generated parser")
+unittest
+{
+    import std : dirEntries, SpanMode;
+
+    auto resourceDir = "resources/cwl-v1.1";
+	foreach (file; dirEntries(resourceDir, SpanMode.depth))
+	{
+		import std : assertNotThrown, baseName, format, startsWith;
+		import salad.resolver : absoluteURI;
+
+		if (!file.baseName.startsWith("valid"))
+		{
+			continue;
+		}
+		importFromURI(file.absoluteURI).assertNotThrown(format!"Failed to load %s"(file));
+	}
+}

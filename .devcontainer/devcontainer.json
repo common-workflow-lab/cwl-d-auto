@@ -20,5 +20,8 @@
 		]
 	},
 	"remoteUser": "vscode",
-	"postCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends python3 python3-pip && pip3 install schema-salad"
+	"features": {
+		"ghcr.io/devcontainers/features/python:1": {}
+	},
+	"postCreateCommand": "pip install schema-salad"
 }

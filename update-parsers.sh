@@ -1,5 +1,9 @@
 #!/bin/sh
 
+set -eu
+
+mkdir -p source/cwl_d_auto
+
 schema-salad-tool --codegen dlang --codegen-package cwl_d_auto.v1_0 --codegen-parser-info "CWL v1.0 parser generated with schema-salad-tool" \
     --codegen-examples resources/cwl-v1.0 \
     https://github.com/common-workflow-language/common-workflow-language/raw/codegen/v1.0/CommonWorkflowLanguage.yml > source/cwl_d_auto/v1_0.d

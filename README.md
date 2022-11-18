@@ -71,7 +71,7 @@ auto yamlNode = doc.match!(d => Node(d));
 The example just prints the document class of a given CWL document.
 
 ```console
-$ dub run -- resources/cwl-v1.0/valid_rename.cwl
+$ dub run -c demo -- resources/cwl-v1.0/valid_rename.cwl
 ...
 Running cwl-d-auto resources/cwl-v1.0/valid_rename.cwl
 file:///workspaces/cwl-d-auto/resources/cwl-v1.0/valid_rename.cwl is CommandLineTool class.

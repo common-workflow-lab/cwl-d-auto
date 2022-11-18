@@ -1,4 +1,6 @@
-
+/**
+ * Example of cwl-d-auto
+ */
 void main(string[] args)
 {
 	import std : enforce, exists, getopt, stderr;
@@ -61,7 +63,7 @@ EOS".outdent[0 .. $ - 1])(args[0].baseName);
 		break;
 	}
 	default:
-		stderr.writefln!"Not yet prepared version: %s"(cwlVersion);
+		stderr.writefln!"Example is not yet prepared: %s"(cwlVersion);
 		return;
 	}
 }

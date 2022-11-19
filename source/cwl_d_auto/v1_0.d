@@ -30,6 +30,7 @@ enum parserInfo = "CWL v1.0 parser generated with schema-salad-tool";
  */
 class PrimitiveType : SchemaBase
 {
+    ///
     enum Symbol
     {
         s0 = "null", ///

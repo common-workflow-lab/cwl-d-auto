@@ -32,7 +32,7 @@ EOS".outdent[0 .. $ - 1])(args[0].baseName);
 	switch(cwlVersion)
 	{
 	case "v1.0":{
-		import cwl_d_auto.v1_0;
+		import cwl.v1_0;
 		import salad.resolver : absoluteURI;
 
 		import dyaml : Node;

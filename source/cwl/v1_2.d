@@ -8,7 +8,7 @@
  * License: Apache-2.0
  * Date: 2022-12-09
  */
-module cwl_d_auto.v1_2;
+module cwl.v1_2;
 
 import salad.meta.dumper : genDumper;
 import salad.meta.impl : genCtor, genIdentifier, genOpEq;

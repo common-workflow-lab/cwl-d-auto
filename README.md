@@ -15,17 +15,17 @@ Each parser is generated with [schema-salad-tool](https://github.com/common-work
 
 - CWL v1.0
   ```console
-  $ schema-salad-tool --codegen dlang https://github.com/common-workflow-language/common-workflow-language/raw/codegen/v1.0/CommonWorkflowLanguage.yml --codegen-package cwl_d_auto.v1_0 --codegen-parser-info "CWL v1.0 parser generated with schema-salad-tool" --codegen-examples resources/cwl-v1.0 > v1_0.d
+  $ schema-salad-tool --codegen dlang https://github.com/common-workflow-language/common-workflow-language/raw/codegen/v1.0/CommonWorkflowLanguage.yml --codegen-package cwl.v1_0 --codegen-parser-info "CWL v1.0 parser generated with schema-salad-tool" --codegen-examples resources/cwl-v1.0 > v1_0.d
   ```
 
 - CWL v1.1
   ```console
-  $ schema-salad-tool --codegen dlang https://github.com/common-workflow-language/cwl-v1.1/raw/codegen/CommonWorkflowLanguage.yml --codegen-package cwl_d_auto.v1_1 --codegen-parser-info "CWL v1.1 parser generated with schema-salad-tool" --codegen-examples resources/cwl-v1.1 > v1_1.d
+  $ schema-salad-tool --codegen dlang https://github.com/common-workflow-language/cwl-v1.1/raw/codegen/CommonWorkflowLanguage.yml --codegen-package cwl.v1_1 --codegen-parser-info "CWL v1.1 parser generated with schema-salad-tool" --codegen-examples resources/cwl-v1.1 > v1_1.d
   ```
 
 - CWL v1.2
   ```console
-  $ schema-salad-tool --codegen dlang https://github.com/common-workflow-language/cwl-v1.2/raw/1.2.1_proposed/CommonWorkflowLanguage.yml --codegen-package cwl_d_auto.v1_2 --codegen-parser-info "CWL v1.2 parser generated with schema-salad-tool" --codegen-examples resources/cwl-v1.2 > v1_2.d
+  $ schema-salad-tool --codegen dlang https://github.com/common-workflow-language/cwl-v1.2/raw/1.2.1_proposed/CommonWorkflowLanguage.yml --codegen-package cwl.v1_2 --codegen-parser-info "CWL v1.2 parser generated with schema-salad-tool" --codegen-examples resources/cwl-v1.2 > v1_2.d
   ```
 
 - You can specify the package name via `--codegen-package`.
@@ -36,7 +36,7 @@ Each parser is generated with [schema-salad-tool](https://github.com/common-work
 See [source/app.d](source/app.d) for a concrete example.
 
 ```d
-import cwl_d_auto.v1_0; // auto generated CWL parser
+import cwl.v1_0; // auto generated CWL parser
 import salad.resolver : absoluteURI;
 
 import dyaml : Node;
@@ -78,7 +78,7 @@ file:///workspaces/cwl-d-auto/resources/cwl-v1.0/valid_rename.cwl is CommandLine
 ```
 
 ## How to test
-It checks that CWL documents in [`resources`](resources) can be loaded with parsers in [`source/cwl_d_auto`](source/cwl_d_auto).
+It checks that CWL documents in [`resources`](resources) can be loaded with parsers in [`source/cwl`](source/cwl_d_auto).
 ```console
 $ dub test
 ```

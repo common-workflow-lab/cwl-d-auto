@@ -1,5 +1,9 @@
 /**
  * Example of cwl-d-auto
+ *
+ * Authors: Tomoya Tanjo
+ * Copyright: © 2022 Tomoya Tanjo
+ * License: Apache-2.0
  */
 void main(string[] args)
 {

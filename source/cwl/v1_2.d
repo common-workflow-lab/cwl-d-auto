@@ -6,23 +6,31 @@
  * The embedded document is subject to the license of the original schema.
  * 
  * License: Apache-2.0
- * Date: 2022-12-09
+ * Date: 2023-08-14
  */
 module cwl.v1_2;
 
 import salad.meta.dumper : genDumper;
-import salad.meta.impl : genCtor, genIdentifier, genOpEq;
+import salad.meta.impl : genCtor_, genIdentifier, genOpEq;
 import salad.meta.parser : import_ = importFromURI;
 import salad.meta.uda : documentRoot, id, idMap, link, LinkResolver, secondaryFilesDSL, typeDSL;
 import salad.primitives : SchemaBase;
-import salad.type : None, Either;
+import salad.type : None, Union;
 
 /// parser information
 enum parserInfo = "CWL v1.2 parser generated with schema-salad-tool";
 
+enum saladVersion = "v1.1";
+
+mixin template genCtor()
+{
+    mixin genCtor_!saladVersion;
+}
+
 /**
- * Salad data types are based on Avro schema declarations.  Refer to the
- * [Avro schema declaration documentation](https://avro.apache.org/docs/current/spec.html#schemas) for
+ * Names of salad data types (based on Avro schema declarations).
+ * 
+ * Refer to the [Avro schema declaration documentation](https://avro.apache.org/docs/current/spec.html#schemas) for
  * detailed information.
  * 
  * null: no value
@@ -65,7 +73,7 @@ class RecordField : SchemaBase
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
+    Union!(None, string, string[]) doc_;
     /**
      * The name of the field
      */
@@ -73,7 +81,7 @@ class RecordField : SchemaBase
     /**
      * The field type
      */
-    @typeDSL Either!(PrimitiveType, RecordSchema, EnumSchema, ArraySchema, string, Either!(PrimitiveType, RecordSchema, EnumSchema, ArraySchema, string)[]) type_;
+    @typeDSL Union!(PrimitiveType, RecordSchema, EnumSchema, ArraySchema, string, Union!(PrimitiveType, RecordSchema, EnumSchema, ArraySchema, string)[]) type_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -86,7 +94,7 @@ class RecordSchema : SchemaBase
     /**
      * Defines the fields of the record.
      */
-    @idMap("name", "type") Either!(None, RecordField[]) fields_;
+    @idMap("name", "type") Union!(None, RecordField[]) fields_;
     /**
      * Must be `record`
      */
@@ -102,6 +110,8 @@ class RecordSchema : SchemaBase
  */
 class EnumSchema : SchemaBase
 {
+    ///
+    @id Union!(None, string) name_;
     /**
      * Defines the set of valid symbols.
      */
@@ -122,7 +132,7 @@ class ArraySchema : SchemaBase
     /**
      * Defines the type of the array elements.
      */
-    @typeDSL Either!(PrimitiveType, RecordSchema, EnumSchema, ArraySchema, string, Either!(PrimitiveType, RecordSchema, EnumSchema, ArraySchema, string)[]) items_;
+    Union!(PrimitiveType, RecordSchema, EnumSchema, ArraySchema, string, Union!(PrimitiveType, RecordSchema, EnumSchema, ArraySchema, string)[]) items_;
     /**
      * Must be `array`
      */
@@ -206,10 +216,10 @@ class CWLType : SchemaBase
  * Files are represented as objects with `class` of `File`.  File objects have
  * a number of properties that provide metadata about the file.
  * 
- * The `location` property of a File is a URI that uniquely identifies the
- * file.  Implementations must support the `file://` URI scheme and may support
+ * The `location` property of a File is a IRI that uniquely identifies the
+ * file.  Implementations must support the `file://` IRI scheme and may support
  * other schemes such as `http://` and `https://`.  The value of `location` may also be a
- * relative reference, in which case it must be resolved relative to the URI
+ * relative reference, in which case it must be resolved relative to the IRI
  * of the document it appears in.  Alternately to `location`, implementations
  * must also accept the `path` property on File, which must be a filesystem
  * path available on the same host as the CWL runner (for inputs) or the
@@ -252,7 +262,7 @@ class CWLType : SchemaBase
  * modified by `outputEval`.  Alternately, if the file `cwl.output.json` is
  * present in the output, `outputBinding` is ignored.
  * 
- * File objects in the output must provide either a `location` URI or a `path`
+ * File objects in the output must provide either a `location` IRI or a `path`
  * property in the context of the tool execution runtime (local to the compute
  * node, or within the executing container).
  * 
@@ -289,7 +299,7 @@ class File : SchemaBase
      * implementation may assign the value of the `path` field to `location`,
      * then follow the rules above.
      */
-    @link() Either!(None, string) location_;
+    @link() Union!(None, string) location_;
     /**
      * The local host path where the File is available when a CommandLineTool is
      * executed.  This field must be set by the implementation.  The final
@@ -310,7 +320,7 @@ class File : SchemaBase
      * then implementations may terminate the process with a
      * `permanentFailure`.
      */
-    @link() Either!(None, string) path_;
+    @link() Union!(None, string) path_;
     /**
      * The base name of the file, that is, the name of the file without any
      * leading directory path.  The base name must not contain a slash `/`.
@@ -324,7 +334,7 @@ class File : SchemaBase
      * with `basename`, i.e. the final component of the `path` field must match
      * `basename`.
      */
-    Either!(None, string) basename_;
+    Union!(None, string) basename_;
     /**
      * The name of the directory containing file, that is, the path leading up
      * to the final slash in the path such that `dirname + '/' + basename ==
@@ -335,7 +345,7 @@ class File : SchemaBase
      * CommandLineTool document.  This field must not be used in any other
      * context.
      */
-    Either!(None, string) dirname_;
+    Union!(None, string) dirname_;
     /**
      * The basename root such that `nameroot + nameext == basename`, and
      * `nameext` is empty or begins with a period and contains at most one
@@ -346,7 +356,7 @@ class File : SchemaBase
      * The implementation must set this field automatically based on the value
      * of `basename` prior to evaluating parameter references or expressions.
      */
-    Either!(None, string) nameroot_;
+    Union!(None, string) nameroot_;
     /**
      * The basename extension such that `nameroot + nameext == basename`, and
      * `nameext` is empty or begins with a period and contains at most one
@@ -356,16 +366,16 @@ class File : SchemaBase
      * The implementation must set this field automatically based on the value
      * of `basename` prior to evaluating parameter references or expressions.
      */
-    Either!(None, string) nameext_;
+    Union!(None, string) nameext_;
     /**
      * Optional hash code for validating file integrity.  Currently, must be in the form
      * "sha1$ + hexadecimal string" using the SHA-1 algorithm.
      */
-    Either!(None, string) checksum_;
+    Union!(None, string) checksum_;
     /**
      * Optional file size (in bytes)
      */
-    Either!(None, int, long) size_;
+    Union!(None, int, long) size_;
     /**
      * A list of additional files or directories that are associated with the
      * primary file and must be transferred alongside the primary file.
@@ -374,7 +384,7 @@ class File : SchemaBase
      * listed in `secondaryFiles` may itself include `secondaryFiles` for
      * which the same rules apply.
      */
-    @secondaryFilesDSL Either!(None, Either!(File, Directory)[]) secondaryFiles_;
+    @secondaryFilesDSL Union!(None, Union!(File, Directory)[]) secondaryFiles_;
     /**
      * The format of the file: this must be an IRI of a concept node that
      * represents the file format, preferably defined within an ontology.
@@ -391,7 +401,7 @@ class File : SchemaBase
      * root of the document.  If no ontologies are specified in `$schemas`, the
      * runtime may perform exact file format matches.
      */
-    @link(LinkResolver.id) Either!(None, string) format_;
+    @link(LinkResolver.id) Union!(None, string) format_;
     /**
      * File contents literal.
      * 
@@ -415,7 +425,7 @@ class File : SchemaBase
      * the size of the file is greater than 64 KiB, the
      * implementation must raise a fatal error.
      */
-    Either!(None, string) contents_;
+    Union!(None, string) contents_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -428,8 +438,8 @@ class File : SchemaBase
  * Directories are represented as objects with `class` of `Directory`.  Directory objects have
  * a number of properties that provide metadata about the directory.
  * 
- * The `location` property of a Directory is a URI that uniquely identifies
- * the directory.  Implementations must support the file:// URI scheme and may
+ * The `location` property of a Directory is a IRI that uniquely identifies
+ * the directory.  Implementations must support the file:// IRI scheme and may
  * support other schemes such as http://.  Alternately to `location`,
  * implementations must also accept the `path` property on Directory, which
  * must be a filesystem path available on the same host as the CWL runner (for
@@ -458,7 +468,7 @@ class File : SchemaBase
  * first and have local values of `path` assigned.
  * 
  * Directory objects in CommandLineTool output must provide either a
- * `location` URI or a `path` property in the context of the tool execution
+ * `location` IRI or a `path` property in the context of the tool execution
  * runtime (local to the compute node, or within the executing container).
  * 
  * An ExpressionTool may forward file references from input to output by using
@@ -491,7 +501,7 @@ class Directory : SchemaBase
      * implementation may assign the value of the `path` field to `location`,
      * then follow the rules above.
      */
-    @link() Either!(None, string) location_;
+    @link() Union!(None, string) location_;
     /**
      * The local path where the Directory is made available prior to executing a
      * CommandLineTool.  This must be set by the implementation.  This field
@@ -507,7 +517,7 @@ class Directory : SchemaBase
      * then implementations may terminate the process with a
      * `permanentFailure`.
      */
-    @link() Either!(None, string) path_;
+    @link() Union!(None, string) path_;
     /**
      * The base name of the directory, that is, the name of the file without any
      * leading directory path.  The base name must not contain a slash `/`.
@@ -521,7 +531,7 @@ class Directory : SchemaBase
      * with `basename`, i.e. the final component of the `path` field must match
      * `basename`.
      */
-    Either!(None, string) basename_;
+    Union!(None, string) basename_;
     /**
      * List of files or subdirectories contained in this directory.  The name
      * of each file or subdirectory is determined by the `basename` field of
@@ -531,7 +541,7 @@ class Directory : SchemaBase
      * equivalent to a single subdirectory with the listings recursively
      * merged.
      */
-    Either!(None, Either!(File, Directory)[]) listing_;
+    Union!(None, Union!(File, Directory)[]) listing_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -574,7 +584,7 @@ class InputBinding : SchemaBase
      * Preserved for v1.0 backwards compatibility.  Will be removed in
      * CWL v2.0.  Use `InputParameter.loadContents` instead.
      */
-    Either!(None, bool) loadContents_;
+    Union!(None, bool) loadContents_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -587,7 +597,7 @@ class InputRecordField : SchemaBase
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
+    Union!(None, string, string[]) doc_;
     /**
      * The name of the field
      */
@@ -595,11 +605,11 @@ class InputRecordField : SchemaBase
     /**
      * The field type
      */
-    @typeDSL Either!(CWLType, InputRecordSchema, InputEnumSchema, InputArraySchema, string, Either!(CWLType, InputRecordSchema, InputEnumSchema, InputArraySchema, string)[]) type_;
+    @typeDSL Union!(CWLType, InputRecordSchema, InputEnumSchema, InputArraySchema, string, Union!(CWLType, InputRecordSchema, InputEnumSchema, InputArraySchema, string)[]) type_;
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -643,7 +653,7 @@ class InputRecordField : SchemaBase
      *     extensions, the path is unchanged.
      *   3. Append the remainder of the string to the end of the file path.
      */
-    @secondaryFilesDSL Either!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
+    @secondaryFilesDSL Union!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -652,7 +662,7 @@ class InputRecordField : SchemaBase
      * indicate whether it is valid to stream file contents using a named
      * pipe.  Default: `false`.
      */
-    Either!(None, bool) streamable_;
+    Union!(None, bool) streamable_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -661,7 +671,7 @@ class InputRecordField : SchemaBase
      * parameter, preferably defined within an ontology.  If no ontology is
      * available, file formats may be tested by exact match.
      */
-    @link(LinkResolver.id) Either!(None, string, string[], Expression) format_;
+    @link(LinkResolver.id) Union!(None, string, string[], Expression) format_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -672,7 +682,7 @@ class InputRecordField : SchemaBase
      * expressions.  If the size of the file is greater than 64 KiB,
      * the implementation must raise a fatal error.
      */
-    Either!(None, bool) loadContents_;
+    Union!(None, bool) loadContents_;
     /**
      * Only valid when `type: Directory` or is an array of `items: Directory`.
      * 
@@ -685,7 +695,7 @@ class InputRecordField : SchemaBase
      *   2. Inherited from `LoadListingRequirement`
      *   3. By default: `no_listing`
      */
-    Either!(None, LoadListingEnum) loadListing_;
+    Union!(None, LoadListingEnum) loadListing_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -698,7 +708,7 @@ class InputRecordSchema : SchemaBase
     /**
      * Defines the fields of the record.
      */
-    @idMap("name", "type") Either!(None, InputRecordField[]) fields_;
+    @idMap("name", "type") Union!(None, InputRecordField[]) fields_;
     /**
      * Must be `record`
      */
@@ -706,15 +716,15 @@ class InputRecordSchema : SchemaBase
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
+    Union!(None, string, string[]) doc_;
     /**
      * The identifier for this type
      */
-    @id Either!(None, string) name_;
+    @id Union!(None, string) name_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -724,6 +734,10 @@ class InputRecordSchema : SchemaBase
 ///
 class InputEnumSchema : SchemaBase
 {
+    /**
+     * The identifier for this type
+     */
+    @id Union!(None, string) name_;
     /**
      * Defines the set of valid symbols.
      */
@@ -735,15 +749,11 @@ class InputEnumSchema : SchemaBase
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
-    /**
-     * The identifier for this type
-     */
-    @id Either!(None, string) name_;
+    Union!(None, string, string[]) doc_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -756,7 +766,7 @@ class InputArraySchema : SchemaBase
     /**
      * Defines the type of the array elements.
      */
-    @typeDSL Either!(CWLType, InputRecordSchema, InputEnumSchema, InputArraySchema, string, Either!(CWLType, InputRecordSchema, InputEnumSchema, InputArraySchema, string)[]) items_;
+    Union!(CWLType, InputRecordSchema, InputEnumSchema, InputArraySchema, string, Union!(CWLType, InputRecordSchema, InputEnumSchema, InputArraySchema, string)[]) items_;
     /**
      * Must be `array`
      */
@@ -764,15 +774,15 @@ class InputArraySchema : SchemaBase
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
+    Union!(None, string, string[]) doc_;
     /**
      * The identifier for this type
      */
-    @id Either!(None, string) name_;
+    @id Union!(None, string) name_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -785,7 +795,7 @@ class OutputRecordField : SchemaBase
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
+    Union!(None, string, string[]) doc_;
     /**
      * The name of the field
      */
@@ -793,11 +803,11 @@ class OutputRecordField : SchemaBase
     /**
      * The field type
      */
-    @typeDSL Either!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string, Either!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string)[]) type_;
+    @typeDSL Union!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string, Union!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string)[]) type_;
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -841,7 +851,7 @@ class OutputRecordField : SchemaBase
      *     extensions, the path is unchanged.
      *   3. Append the remainder of the string to the end of the file path.
      */
-    @secondaryFilesDSL Either!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
+    @secondaryFilesDSL Union!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -850,14 +860,14 @@ class OutputRecordField : SchemaBase
      * indicate whether it is valid to stream file contents using a named
      * pipe.  Default: `false`.
      */
-    Either!(None, bool) streamable_;
+    Union!(None, bool) streamable_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
      * This is the file format that will be assigned to the output
      * File object.
      */
-    @link(LinkResolver.id) Either!(None, string, Expression) format_;
+    @link(LinkResolver.id) Union!(None, string, Expression) format_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -870,7 +880,7 @@ class OutputRecordSchema : SchemaBase
     /**
      * Defines the fields of the record.
      */
-    @idMap("name", "type") Either!(None, OutputRecordField[]) fields_;
+    @idMap("name", "type") Union!(None, OutputRecordField[]) fields_;
     /**
      * Must be `record`
      */
@@ -878,15 +888,15 @@ class OutputRecordSchema : SchemaBase
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
+    Union!(None, string, string[]) doc_;
     /**
      * The identifier for this type
      */
-    @id Either!(None, string) name_;
+    @id Union!(None, string) name_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -896,6 +906,10 @@ class OutputRecordSchema : SchemaBase
 ///
 class OutputEnumSchema : SchemaBase
 {
+    /**
+     * The identifier for this type
+     */
+    @id Union!(None, string) name_;
     /**
      * Defines the set of valid symbols.
      */
@@ -907,15 +921,11 @@ class OutputEnumSchema : SchemaBase
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
-    /**
-     * The identifier for this type
-     */
-    @id Either!(None, string) name_;
+    Union!(None, string, string[]) doc_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -928,7 +938,7 @@ class OutputArraySchema : SchemaBase
     /**
      * Defines the type of the array elements.
      */
-    @typeDSL Either!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string, Either!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string)[]) items_;
+    Union!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string, Union!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string)[]) items_;
     /**
      * Must be `array`
      */
@@ -936,15 +946,15 @@ class OutputArraySchema : SchemaBase
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
+    Union!(None, string, string[]) doc_;
     /**
      * The identifier for this type
      */
-    @id Either!(None, string) name_;
+    @id Union!(None, string) name_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -967,7 +977,7 @@ class InlineJavascriptRequirement : SchemaBase
      * before executing the expression code.  Allows for function definitions that may
      * be called from CWL expressions.
      */
-    Either!(None, string[]) expressionLib_;
+    Union!(None, string[]) expressionLib_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -997,7 +1007,7 @@ class SchemaDefRequirement : SchemaBase
     /**
      * The list of type definitions.
      */
-    Either!(CommandInputRecordSchema, CommandInputEnumSchema, CommandInputArraySchema)[] types_;
+    Union!(CommandInputRecordSchema, CommandInputEnumSchema, CommandInputArraySchema)[] types_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1073,14 +1083,14 @@ class SecondaryFileSchema : SchemaBase
      *     extensions, the path is unchanged.
      *   3. Append the remainder of the string to the end of the file path.
      */
-    Either!(string, Expression) pattern_;
+    Union!(string, Expression) pattern_;
     /**
      * An implementation must not fail workflow execution if `required` is
      * set to `false` and the expected secondary file does not exist.
      * Default value for `required` field is `true` for secondary files on
      * input and `false` for secondary files on output.
      */
-    Either!(None, bool, Expression) required_;
+    Union!(None, bool, Expression) required_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1098,7 +1108,7 @@ class LoadListingRequirement : SchemaBase
      */
     static immutable class_ = "LoadListingRequirement";
     ///
-    Either!(None, LoadListingEnum) loadListing_;
+    Union!(None, LoadListingEnum) loadListing_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1119,7 +1129,7 @@ class EnvironmentDef : SchemaBase
     /**
      * The environment variable value
      */
-    Either!(string, Expression) envValue_;
+    Union!(string, Expression) envValue_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1170,7 +1180,7 @@ class CommandLineBinding : SchemaBase
      * Preserved for v1.0 backwards compatibility.  Will be removed in
      * CWL v2.0.  Use `InputParameter.loadContents` instead.
      */
-    Either!(None, bool) loadContents_;
+    Union!(None, bool) loadContents_;
     /**
      * The sorting key.  Default position is 0. If a [CWL Parameter Reference](#Parameter_references)
      * or [CWL Expression](#Expressions_(Optional)) is used and if the
@@ -1180,22 +1190,22 @@ class CommandLineBinding : SchemaBase
      * applied before evaluating the expression. Expressions must return a
      * single value of type int or a null.
      */
-    Either!(None, int, Expression) position_;
+    Union!(None, int, Expression) position_;
     /**
      * Command line prefix to add before the value.
      */
-    Either!(None, string) prefix_;
+    Union!(None, string) prefix_;
     /**
      * If true (default), then the prefix and value must be added as separate
      * command line arguments; if false, prefix and value must be concatenated
      * into a single command line argument.
      */
-    Either!(None, bool) separate_;
+    Union!(None, bool) separate_;
     /**
      * Join the array elements into a single string with the elements
      * separated by `itemSeparator`.
      */
-    Either!(None, string) itemSeparator_;
+    Union!(None, string) itemSeparator_;
     /**
      * If `valueFrom` is a constant string value, use this as the value and
      * apply the binding rules above.
@@ -1214,7 +1224,7 @@ class CommandLineBinding : SchemaBase
      * When a binding is part of the `CommandLineTool.arguments` field,
      * the `valueFrom` field is required.
      */
-    Either!(None, string, Expression) valueFrom_;
+    Union!(None, string, Expression) valueFrom_;
     /**
      * If `ShellCommandRequirement` is in the requirements for the current command,
      * this controls whether the value is quoted on the command line (default is true).
@@ -1223,7 +1233,7 @@ class CommandLineBinding : SchemaBase
      * If `shellQuote` is true or not provided, the implementation must not
      * permit interpretation of any shell metacharacters or directives.
      */
-    Either!(None, bool) shellQuote_;
+    Union!(None, bool) shellQuote_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1254,7 +1264,7 @@ class CommandOutputBinding : SchemaBase
      * expressions.  If the size of the file is greater than 64 KiB,
      * the implementation must raise a fatal error.
      */
-    Either!(None, bool) loadContents_;
+    Union!(None, bool) loadContents_;
     /**
      * Only valid when `type: Directory` or is an array of `items: Directory`.
      * 
@@ -1267,7 +1277,7 @@ class CommandOutputBinding : SchemaBase
      *   2. Inherited from `LoadListingRequirement`
      *   3. By default: `no_listing`
      */
-    Either!(None, LoadListingEnum) loadListing_;
+    Union!(None, LoadListingEnum) loadListing_;
     /**
      * Find files or directories relative to the output directory, using POSIX
      * glob(3) pathname matching.  If an array is provided, find files or
@@ -1305,7 +1315,7 @@ class CommandOutputBinding : SchemaBase
      * output, so globs and expressions must not assume access to the
      * container filesystem except for declared input and output.
      */
-    Either!(None, string, Expression, string[]) glob_;
+    Union!(None, string, Expression, string[]) glob_;
     /**
      * Evaluate an expression to generate the output value.  If
      * `glob` was specified, the value of `self` must be an array
@@ -1327,7 +1337,7 @@ class CommandOutputBinding : SchemaBase
      * bypasses `outputEval` and is not subject to the 64 KiB
      * `loadContents` limit.
      */
-    Either!(None, Expression) outputEval_;
+    Union!(None, Expression) outputEval_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1340,7 +1350,7 @@ class CommandLineBindable : SchemaBase
     /**
      * Describes how to turn this object into command line arguments.
      */
-    Either!(None, CommandLineBinding) inputBinding_;
+    Union!(None, CommandLineBinding) inputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1353,7 +1363,7 @@ class CommandInputRecordField : SchemaBase
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
+    Union!(None, string, string[]) doc_;
     /**
      * The name of the field
      */
@@ -1361,11 +1371,11 @@ class CommandInputRecordField : SchemaBase
     /**
      * The field type
      */
-    @typeDSL Either!(CWLType, CommandInputRecordSchema, CommandInputEnumSchema, CommandInputArraySchema, string, Either!(CWLType, CommandInputRecordSchema, CommandInputEnumSchema, CommandInputArraySchema, string)[]) type_;
+    @typeDSL Union!(CWLType, CommandInputRecordSchema, CommandInputEnumSchema, CommandInputArraySchema, string, Union!(CWLType, CommandInputRecordSchema, CommandInputEnumSchema, CommandInputArraySchema, string)[]) type_;
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -1409,7 +1419,7 @@ class CommandInputRecordField : SchemaBase
      *     extensions, the path is unchanged.
      *   3. Append the remainder of the string to the end of the file path.
      */
-    @secondaryFilesDSL Either!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
+    @secondaryFilesDSL Union!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -1418,7 +1428,7 @@ class CommandInputRecordField : SchemaBase
      * indicate whether it is valid to stream file contents using a named
      * pipe.  Default: `false`.
      */
-    Either!(None, bool) streamable_;
+    Union!(None, bool) streamable_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -1427,7 +1437,7 @@ class CommandInputRecordField : SchemaBase
      * parameter, preferably defined within an ontology.  If no ontology is
      * available, file formats may be tested by exact match.
      */
-    @link(LinkResolver.id) Either!(None, string, string[], Expression) format_;
+    @link(LinkResolver.id) Union!(None, string, string[], Expression) format_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -1438,7 +1448,7 @@ class CommandInputRecordField : SchemaBase
      * expressions.  If the size of the file is greater than 64 KiB,
      * the implementation must raise a fatal error.
      */
-    Either!(None, bool) loadContents_;
+    Union!(None, bool) loadContents_;
     /**
      * Only valid when `type: Directory` or is an array of `items: Directory`.
      * 
@@ -1451,11 +1461,11 @@ class CommandInputRecordField : SchemaBase
      *   2. Inherited from `LoadListingRequirement`
      *   3. By default: `no_listing`
      */
-    Either!(None, LoadListingEnum) loadListing_;
+    Union!(None, LoadListingEnum) loadListing_;
     /**
      * Describes how to turn this object into command line arguments.
      */
-    Either!(None, CommandLineBinding) inputBinding_;
+    Union!(None, CommandLineBinding) inputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1468,7 +1478,7 @@ class CommandInputRecordSchema : SchemaBase
     /**
      * Defines the fields of the record.
      */
-    @idMap("name", "type") Either!(None, CommandInputRecordField[]) fields_;
+    @idMap("name", "type") Union!(None, CommandInputRecordField[]) fields_;
     /**
      * Must be `record`
      */
@@ -1476,19 +1486,19 @@ class CommandInputRecordSchema : SchemaBase
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
+    Union!(None, string, string[]) doc_;
     /**
      * The identifier for this type
      */
-    @id Either!(None, string) name_;
+    @id Union!(None, string) name_;
     /**
      * Describes how to turn this object into command line arguments.
      */
-    Either!(None, CommandLineBinding) inputBinding_;
+    Union!(None, CommandLineBinding) inputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1498,6 +1508,10 @@ class CommandInputRecordSchema : SchemaBase
 ///
 class CommandInputEnumSchema : SchemaBase
 {
+    /**
+     * The identifier for this type
+     */
+    @id Union!(None, string) name_;
     /**
      * Defines the set of valid symbols.
      */
@@ -1509,19 +1523,15 @@ class CommandInputEnumSchema : SchemaBase
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
-    /**
-     * The identifier for this type
-     */
-    @id Either!(None, string) name_;
+    Union!(None, string, string[]) doc_;
     /**
      * Describes how to turn this object into command line arguments.
      */
-    Either!(None, CommandLineBinding) inputBinding_;
+    Union!(None, CommandLineBinding) inputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1534,7 +1544,7 @@ class CommandInputArraySchema : SchemaBase
     /**
      * Defines the type of the array elements.
      */
-    @typeDSL Either!(CWLType, CommandInputRecordSchema, CommandInputEnumSchema, CommandInputArraySchema, string, Either!(CWLType, CommandInputRecordSchema, CommandInputEnumSchema, CommandInputArraySchema, string)[]) items_;
+    Union!(CWLType, CommandInputRecordSchema, CommandInputEnumSchema, CommandInputArraySchema, string, Union!(CWLType, CommandInputRecordSchema, CommandInputEnumSchema, CommandInputArraySchema, string)[]) items_;
     /**
      * Must be `array`
      */
@@ -1542,19 +1552,19 @@ class CommandInputArraySchema : SchemaBase
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
+    Union!(None, string, string[]) doc_;
     /**
      * The identifier for this type
      */
-    @id Either!(None, string) name_;
+    @id Union!(None, string) name_;
     /**
      * Describes how to turn this object into command line arguments.
      */
-    Either!(None, CommandLineBinding) inputBinding_;
+    Union!(None, CommandLineBinding) inputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1567,7 +1577,7 @@ class CommandOutputRecordField : SchemaBase
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
+    Union!(None, string, string[]) doc_;
     /**
      * The name of the field
      */
@@ -1575,11 +1585,11 @@ class CommandOutputRecordField : SchemaBase
     /**
      * The field type
      */
-    @typeDSL Either!(CWLType, CommandOutputRecordSchema, CommandOutputEnumSchema, CommandOutputArraySchema, string, Either!(CWLType, CommandOutputRecordSchema, CommandOutputEnumSchema, CommandOutputArraySchema, string)[]) type_;
+    @typeDSL Union!(CWLType, CommandOutputRecordSchema, CommandOutputEnumSchema, CommandOutputArraySchema, string, Union!(CWLType, CommandOutputRecordSchema, CommandOutputEnumSchema, CommandOutputArraySchema, string)[]) type_;
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -1623,7 +1633,7 @@ class CommandOutputRecordField : SchemaBase
      *     extensions, the path is unchanged.
      *   3. Append the remainder of the string to the end of the file path.
      */
-    @secondaryFilesDSL Either!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
+    @secondaryFilesDSL Union!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -1632,19 +1642,19 @@ class CommandOutputRecordField : SchemaBase
      * indicate whether it is valid to stream file contents using a named
      * pipe.  Default: `false`.
      */
-    Either!(None, bool) streamable_;
+    Union!(None, bool) streamable_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
      * This is the file format that will be assigned to the output
      * File object.
      */
-    @link(LinkResolver.id) Either!(None, string, Expression) format_;
+    @link(LinkResolver.id) Union!(None, string, Expression) format_;
     /**
      * Describes how to generate this output object based on the files
      * produced by a CommandLineTool
      */
-    Either!(None, CommandOutputBinding) outputBinding_;
+    Union!(None, CommandOutputBinding) outputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1657,7 +1667,7 @@ class CommandOutputRecordSchema : SchemaBase
     /**
      * Defines the fields of the record.
      */
-    @idMap("name", "type") Either!(None, CommandOutputRecordField[]) fields_;
+    @idMap("name", "type") Union!(None, CommandOutputRecordField[]) fields_;
     /**
      * Must be `record`
      */
@@ -1665,15 +1675,15 @@ class CommandOutputRecordSchema : SchemaBase
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
+    Union!(None, string, string[]) doc_;
     /**
      * The identifier for this type
      */
-    @id Either!(None, string) name_;
+    @id Union!(None, string) name_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1683,6 +1693,10 @@ class CommandOutputRecordSchema : SchemaBase
 ///
 class CommandOutputEnumSchema : SchemaBase
 {
+    /**
+     * The identifier for this type
+     */
+    @id Union!(None, string) name_;
     /**
      * Defines the set of valid symbols.
      */
@@ -1694,15 +1708,11 @@ class CommandOutputEnumSchema : SchemaBase
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
-    /**
-     * The identifier for this type
-     */
-    @id Either!(None, string) name_;
+    Union!(None, string, string[]) doc_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1715,7 +1725,7 @@ class CommandOutputArraySchema : SchemaBase
     /**
      * Defines the type of the array elements.
      */
-    @typeDSL Either!(CWLType, CommandOutputRecordSchema, CommandOutputEnumSchema, CommandOutputArraySchema, string, Either!(CWLType, CommandOutputRecordSchema, CommandOutputEnumSchema, CommandOutputArraySchema, string)[]) items_;
+    Union!(CWLType, CommandOutputRecordSchema, CommandOutputEnumSchema, CommandOutputArraySchema, string, Union!(CWLType, CommandOutputRecordSchema, CommandOutputEnumSchema, CommandOutputArraySchema, string)[]) items_;
     /**
      * Must be `array`
      */
@@ -1723,15 +1733,15 @@ class CommandOutputArraySchema : SchemaBase
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
+    Union!(None, string, string[]) doc_;
     /**
      * The identifier for this type
      */
-    @id Either!(None, string) name_;
+    @id Union!(None, string) name_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1746,7 +1756,7 @@ class CommandInputParameter : SchemaBase
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -1790,7 +1800,7 @@ class CommandInputParameter : SchemaBase
      *     extensions, the path is unchanged.
      *   3. Append the remainder of the string to the end of the file path.
      */
-    @secondaryFilesDSL Either!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
+    @secondaryFilesDSL Union!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -1799,15 +1809,15 @@ class CommandInputParameter : SchemaBase
      * indicate whether it is valid to stream file contents using a named
      * pipe.  Default: `false`.
      */
-    Either!(None, bool) streamable_;
+    Union!(None, bool) streamable_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
+    Union!(None, string, string[]) doc_;
     /**
      * The unique identifier for this object.
      */
-    @id Either!(None, string) id_;
+    @id Union!(None, string) id_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -1816,7 +1826,7 @@ class CommandInputParameter : SchemaBase
      * parameter, preferably defined within an ontology.  If no ontology is
      * available, file formats may be tested by exact match.
      */
-    @link(LinkResolver.id) Either!(None, string, string[], Expression) format_;
+    @link(LinkResolver.id) Union!(None, string, string[], Expression) format_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -1827,7 +1837,7 @@ class CommandInputParameter : SchemaBase
      * expressions.  If the size of the file is greater than 64 KiB,
      * the implementation must raise a fatal error.
      */
-    Either!(None, bool) loadContents_;
+    Union!(None, bool) loadContents_;
     /**
      * Only valid when `type: Directory` or is an array of `items: Directory`.
      * 
@@ -1840,23 +1850,23 @@ class CommandInputParameter : SchemaBase
      *   2. Inherited from `LoadListingRequirement`
      *   3. By default: `no_listing`
      */
-    Either!(None, LoadListingEnum) loadListing_;
+    Union!(None, LoadListingEnum) loadListing_;
     /**
      * The default value to use for this parameter if the parameter is missing
      * from the input object, or if the value of the parameter in the input
      * object is `null`.  Default values are applied before evaluating expressions
      * (e.g. dependent `valueFrom` fields).
      */
-    Either!(None, File, Directory, Any) default_;
+    Union!(None, File, Directory, Any) default_;
     /**
      * Specify valid types of data that may be assigned to this parameter.
      */
-    @typeDSL Either!(CWLType, stdin, CommandInputRecordSchema, CommandInputEnumSchema, CommandInputArraySchema, string, Either!(CWLType, CommandInputRecordSchema, CommandInputEnumSchema, CommandInputArraySchema, string)[]) type_;
+    @typeDSL Union!(CWLType, stdin, CommandInputRecordSchema, CommandInputEnumSchema, CommandInputArraySchema, string, Union!(CWLType, CommandInputRecordSchema, CommandInputEnumSchema, CommandInputArraySchema, string)[]) type_;
     /**
      * Describes how to turn the input parameters of a process into
      * command line arguments.
      */
-    Either!(None, CommandLineBinding) inputBinding_;
+    Union!(None, CommandLineBinding) inputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1871,7 +1881,7 @@ class CommandOutputParameter : SchemaBase
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -1915,7 +1925,7 @@ class CommandOutputParameter : SchemaBase
      *     extensions, the path is unchanged.
      *   3. Append the remainder of the string to the end of the file path.
      */
-    @secondaryFilesDSL Either!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
+    @secondaryFilesDSL Union!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -1924,30 +1934,30 @@ class CommandOutputParameter : SchemaBase
      * indicate whether it is valid to stream file contents using a named
      * pipe.  Default: `false`.
      */
-    Either!(None, bool) streamable_;
+    Union!(None, bool) streamable_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
+    Union!(None, string, string[]) doc_;
     /**
      * The unique identifier for this object.
      */
-    @id Either!(None, string) id_;
+    @id Union!(None, string) id_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
      * This is the file format that will be assigned to the output
      * File object.
      */
-    @link(LinkResolver.id) Either!(None, string, Expression) format_;
+    @link(LinkResolver.id) Union!(None, string, Expression) format_;
     /**
      * Specify valid types of data that may be assigned to this parameter.
      */
-    @typeDSL Either!(CWLType, stdout, stderr, CommandOutputRecordSchema, CommandOutputEnumSchema, CommandOutputArraySchema, string, Either!(CWLType, CommandOutputRecordSchema, CommandOutputEnumSchema, CommandOutputArraySchema, string)[]) type_;
+    @typeDSL Union!(CWLType, stdout, stderr, CommandOutputRecordSchema, CommandOutputEnumSchema, CommandOutputArraySchema, string, Union!(CWLType, CommandOutputRecordSchema, CommandOutputEnumSchema, CommandOutputArraySchema, string)[]) type_;
     /**
      * Describes how to generate this output object based on the files produced by a CommandLineTool
      */
-    Either!(None, CommandOutputBinding) outputBinding_;
+    Union!(None, CommandOutputBinding) outputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -1972,7 +1982,7 @@ class CommandOutputParameter : SchemaBase
  *     type: File
  *     streamable: true
  * 
- * stdin: ${inputs.an_input_name.path}
+ * stdin: $(inputs.an_input_name.path)
  * ```
  */
 class stdin : SchemaBase
@@ -2121,15 +2131,15 @@ class stderr : SchemaBase
      * Only useful for `$graph` at `Process` level. Should not be exposed
      * to users in graphical or terminal user interfaces.
      */
-    @id Either!(None, string) id_;
+    @id Union!(None, string) id_;
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
+    Union!(None, string, string[]) doc_;
     /**
      * Defines the input parameters of the process.  The process is ready to
      * run when all required input parameters are associated with concrete
@@ -2157,23 +2167,24 @@ class stderr : SchemaBase
      * error and the implementation must not attempt to run the process,
      * unless overridden at user option.
      */
-    @idMap("class") Either!(None, Either!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement)[]) requirements_;
+    @idMap("class") Union!(None, Union!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement)[]) requirements_;
     /**
      * Declares hints applying to either the runtime environment or the
      * workflow engine that may be helpful in executing this process.  It is
      * not an error if an implementation cannot satisfy all hints, however
      * the implementation may report a warning.
      */
-    @idMap("class") Either!(None, Either!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement, Any)[]) hints_;
+    @idMap("class") Union!(None, Union!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement, Any)[]) hints_;
     /**
      * CWL document version. Always required at the document root. Not
      * required for a Process embedded inside another Process.
      */
-    Either!(None, CWLVersion) cwlVersion_;
+    Union!(None, CWLVersion) cwlVersion_;
     /**
      * An identifier for the type of computational operation, of this Process.
-     * Especially useful for "class: Operation", but can also be used for
-     * CommandLineTool, Workflow, or ExpressionTool.
+     * Especially useful for [`Operation`](Workflow.html#Operation), but can also be used for
+     * [`CommandLineTool`](CommandLineTool.html#CommandLineTool),
+     * [`Workflow`](Workflow.html#Workflow), or [ExpressionTool](Workflow.html#ExpressionTool).
      * 
      * If provided, then this must be an IRI of a concept node that
      * represents the type of operation, preferably defined within an ontology.
@@ -2185,7 +2196,7 @@ class stderr : SchemaBase
      * specific Operation concept like
      * [Split read mapping](http://edamontology.org/operation_3199).
      */
-    @link(LinkResolver.id) Either!(None, string[]) intent_;
+    @link(LinkResolver.id) Union!(None, string[]) intent_;
     ///
     static immutable class_ = "CommandLineTool";
     /**
@@ -2205,19 +2216,19 @@ class stderr : SchemaBase
      * environment of the workflow runner find the absolute path of the
      * executable.
      */
-    Either!(None, string, string[]) baseCommand_;
+    Union!(None, string, string[]) baseCommand_;
     /**
      * Command line bindings which are not directly associated with input
      * parameters. If the value is a string, it is used as a string literal
      * argument. If it is an Expression, the result of the evaluation is used
      * as an argument.
      */
-    Either!(None, Either!(string, Expression, CommandLineBinding)[]) arguments_;
+    Union!(None, Union!(string, Expression, CommandLineBinding)[]) arguments_;
     /**
      * A path to a file whose contents must be piped into the command's
      * standard input stream.
      */
-    Either!(None, string, Expression) stdin_;
+    Union!(None, string, Expression) stdin_;
     /**
      * Capture the command's standard error stream to a file written to
      * the designated output directory.
@@ -2229,7 +2240,7 @@ class stderr : SchemaBase
      * return value is not a string, or the resulting path contains illegal
      * characters (such as the path separator `/`) it is an error.
      */
-    Either!(None, string, Expression) stderr_;
+    Union!(None, string, Expression) stderr_;
     /**
      * Capture the command's standard output stream to a file written to
      * the designated output directory.
@@ -2245,13 +2256,13 @@ class stderr : SchemaBase
      * return value is not a string, or the resulting path contains illegal
      * characters (such as the path separator `/`) it is an error.
      */
-    Either!(None, string, Expression) stdout_;
+    Union!(None, string, Expression) stdout_;
     /**
      * Exit codes that indicate the process completed successfully.
      * 
      * If not specified, only exit code 0 is considered success.
      */
-    Either!(None, int[]) successCodes_;
+    Union!(None, int[]) successCodes_;
     /**
      * Exit codes that indicate the process failed due to a possibly
      * temporary condition, where executing the process with the same
@@ -2259,12 +2270,12 @@ class stderr : SchemaBase
      * 
      * If not specified, no exit codes are considered temporary failure.
      */
-    Either!(None, int[]) temporaryFailCodes_;
+    Union!(None, int[]) temporaryFailCodes_;
     /**
      * Exit codes that indicate the process failed due to a permanent logic error, where executing the process with the same runtime environment and same inputs is expected to always fail.
      * If not specified, all exit codes except 0 are considered permanent failure.
      */
-    Either!(None, int[]) permanentFailCodes_;
+    Union!(None, int[]) permanentFailCodes_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -2335,31 +2346,31 @@ class DockerRequirement : SchemaBase
      * immutable digest to ensure an exact container is used:
      * `dockerPull: ubuntu@sha256:45b23dee08af5e43a7fea6c4cf9c25ccf269ee113168c19722f87876677c5cb2`
      */
-    Either!(None, string) dockerPull_;
+    Union!(None, string) dockerPull_;
     /**
      * Specify an HTTP URL from which to download a Docker image using `docker load`.
      */
-    Either!(None, string) dockerLoad_;
+    Union!(None, string) dockerLoad_;
     /**
      * Supply the contents of a Dockerfile which will be built using `docker build`.
      */
-    Either!(None, string) dockerFile_;
+    Union!(None, string) dockerFile_;
     /**
      * Provide HTTP URL to download and gunzip a Docker images using `docker import.
      */
-    Either!(None, string) dockerImport_;
+    Union!(None, string) dockerImport_;
     /**
      * The image id that will be used for `docker run`.  May be a
      * human-readable image name or the image identifier hash.  May be skipped
      * if `dockerPull` is specified, in which case the `dockerPull` image id
      * must be used.
      */
-    Either!(None, string) dockerImageId_;
+    Union!(None, string) dockerImageId_;
     /**
      * Set the designated output directory to a specific location inside the
      * Docker container.
      */
-    Either!(None, string) dockerOutputDirectory_;
+    Union!(None, string) dockerOutputDirectory_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -2399,7 +2410,7 @@ class SoftwarePackage : SchemaBase
      * The (optional) versions of the software that are known to be
      * compatible.
      */
-    Either!(None, string[]) version_;
+    Union!(None, string[]) version_;
     /**
      * One or more [IRI](https://en.wikipedia.org/wiki/Internationalized_Resource_Identifier)s
      * identifying resources for installing or enabling the software named in
@@ -2443,7 +2454,7 @@ class SoftwarePackage : SchemaBase
      * software IRIs should be left out of shared CWL descriptions to avoid
      * clutter.
      */
-    @link() Either!(None, string[]) specs_;
+    @link() Union!(None, string[]) specs_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -2488,7 +2499,7 @@ class Dirent : SchemaBase
      * `entryname` may specify the absolute path within the container
      * where the file or directory must be placed.
      */
-    Either!(None, string, Expression) entryname_;
+    Union!(None, string, Expression) entryname_;
     /**
      * If the value is a string literal or an expression which evaluates to a
      * string, a new text file must be created with the string as the file contents.
@@ -2511,7 +2522,7 @@ class Dirent : SchemaBase
      * interpolation of [Parameter
      * references](#Parameter_references).
      */
-    Either!(string, Expression) entry_;
+    Union!(string, Expression) entry_;
     /**
      * If true, the File or Directory (or array of Files or
      * Directories) declared in `entry` must be writable by the tool.
@@ -2535,7 +2546,7 @@ class Dirent : SchemaBase
      * attempting to rename or delete files or directories that are
      * not explicitly marked as writable.
      */
-    Either!(None, bool) writable_;
+    Union!(None, bool) writable_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -2578,7 +2589,7 @@ class InitialWorkDirRequirement : SchemaBase
      * choose exactly one value for `path`; how this value is chosen
      * is undefined.
      */
-    Either!(Expression, Either!(None, Dirent, Expression, File, Directory, Either!(File, Directory)[])[]) listing_;
+    Union!(Expression, Union!(None, Dirent, Expression, File, Directory, Union!(File, Directory)[])[]) listing_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -2609,7 +2620,7 @@ class EnvVarRequirement : SchemaBase
  * Modify the behavior of CommandLineTool to generate a single string
  * containing a shell command line.  Each item in the `arguments` list must
  * be joined into a string separated by single spaces and quoted to prevent
- * intepretation by the shell, unless `CommandLineBinding` for that argument
+ * interpretation by the shell, unless `CommandLineBinding` for that argument
  * contains `shellQuote: false`.  If `shellQuote: false` is specified, the
  * argument is joined into the command string without quoting, which allows
  * the use of shell metacharacters such as `|` for pipes.
@@ -2686,13 +2697,13 @@ class ResourceRequirement : SchemaBase
      * do not support fractional CPUs may round up the request to the
      * next whole number.
      */
-    Either!(None, int, long, float, Expression) coresMin_;
+    Union!(None, int, long, float, Expression) coresMin_;
     /**
      * Maximum reserved number of CPU cores.
      * 
      * See `coresMin` for discussion about fractional CPU requests.
      */
-    Either!(None, int, long, float, Expression) coresMax_;
+    Union!(None, int, long, float, Expression) coresMax_;
     /**
      * Minimum reserved RAM in mebibytes (2**20) (default is 256)
      * 
@@ -2702,13 +2713,13 @@ class ResourceRequirement : SchemaBase
      * expressions on the CommandLineTool as `runtime.ram`, must be a
      * non-zero integer.
      */
-    Either!(None, int, long, float, Expression) ramMin_;
+    Union!(None, int, long, float, Expression) ramMin_;
     /**
      * Maximum reserved RAM in mebibytes (2**20)
      * 
      * See `ramMin` for discussion about fractional RAM requests.
      */
-    Either!(None, int, long, float, Expression) ramMax_;
+    Union!(None, int, long, float, Expression) ramMax_;
     /**
      * Minimum reserved filesystem based storage for the designated temporary directory, in mebibytes (2**20) (default is 1024)
      * 
@@ -2718,13 +2729,13 @@ class ResourceRequirement : SchemaBase
      * to expressions on the CommandLineTool as `runtime.tmpdirSize`,
      * must be a non-zero integer.
      */
-    Either!(None, int, long, float, Expression) tmpdirMin_;
+    Union!(None, int, long, float, Expression) tmpdirMin_;
     /**
      * Maximum reserved filesystem based storage for the designated temporary directory, in mebibytes (2**20)
      * 
      * See `tmpdirMin` for discussion about fractional storage requests.
      */
-    Either!(None, int, long, float, Expression) tmpdirMax_;
+    Union!(None, int, long, float, Expression) tmpdirMax_;
     /**
      * Minimum reserved filesystem based storage for the designated output directory, in mebibytes (2**20) (default is 1024)
      * 
@@ -2734,13 +2745,13 @@ class ResourceRequirement : SchemaBase
      * to expressions on the CommandLineTool as `runtime.outdirSize`,
      * must be a non-zero integer.
      */
-    Either!(None, int, long, float, Expression) outdirMin_;
+    Union!(None, int, long, float, Expression) outdirMin_;
     /**
      * Maximum reserved filesystem based storage for the designated output directory, in mebibytes (2**20)
      * 
      * See `outdirMin` for discussion about fractional storage requests.
      */
-    Either!(None, int, long, float, Expression) outdirMax_;
+    Union!(None, int, long, float, Expression) outdirMax_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -2765,7 +2776,7 @@ class WorkReuse : SchemaBase
      */
     static immutable class_ = "WorkReuse";
     ///
-    Either!(bool, Expression) enableReuse_;
+    Union!(bool, Expression) enableReuse_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -2796,7 +2807,7 @@ class NetworkAccess : SchemaBase
      */
     static immutable class_ = "NetworkAccess";
     ///
-    Either!(bool, Expression) networkAccess_;
+    Union!(bool, Expression) networkAccess_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -2868,7 +2879,7 @@ class ToolTimeLimit : SchemaBase
      * The time limit, in seconds.  A time limit of zero means no
      * time limit.  Negative time limits are an error.
      */
-    Either!(int, long, Expression) timelimit_;
+    Union!(int, long, Expression) timelimit_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -2881,7 +2892,7 @@ class ExpressionToolOutputParameter : SchemaBase
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -2925,7 +2936,7 @@ class ExpressionToolOutputParameter : SchemaBase
      *     extensions, the path is unchanged.
      *   3. Append the remainder of the string to the end of the file path.
      */
-    @secondaryFilesDSL Either!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
+    @secondaryFilesDSL Union!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -2934,26 +2945,28 @@ class ExpressionToolOutputParameter : SchemaBase
      * indicate whether it is valid to stream file contents using a named
      * pipe.  Default: `false`.
      */
-    Either!(None, bool) streamable_;
+    Union!(None, bool) streamable_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
+    Union!(None, string, string[]) doc_;
     /**
      * The unique identifier for this object.
      */
-    @id Either!(None, string) id_;
+    @id Union!(None, string) id_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
      * This is the file format that will be assigned to the output
      * File object.
      */
-    @link(LinkResolver.id) Either!(None, string, Expression) format_;
+    @link(LinkResolver.id) Union!(None, string, Expression) format_;
     /**
      * Specify valid types of data that may be assigned to this parameter.
+     * Note that this field just acts as a hint, as the outputs of an
+     * ExpressionTool process are always considered valid.
      */
-    @typeDSL Either!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string, Either!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string)[]) type_;
+    @typeDSL Union!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string, Union!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string)[]) type_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -2966,7 +2979,7 @@ class WorkflowInputParameter : SchemaBase
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -3010,7 +3023,7 @@ class WorkflowInputParameter : SchemaBase
      *     extensions, the path is unchanged.
      *   3. Append the remainder of the string to the end of the file path.
      */
-    @secondaryFilesDSL Either!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
+    @secondaryFilesDSL Union!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -3019,15 +3032,15 @@ class WorkflowInputParameter : SchemaBase
      * indicate whether it is valid to stream file contents using a named
      * pipe.  Default: `false`.
      */
-    Either!(None, bool) streamable_;
+    Union!(None, bool) streamable_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
+    Union!(None, string, string[]) doc_;
     /**
      * The unique identifier for this object.
      */
-    @id Either!(None, string) id_;
+    @id Union!(None, string) id_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -3036,7 +3049,7 @@ class WorkflowInputParameter : SchemaBase
      * parameter, preferably defined within an ontology.  If no ontology is
      * available, file formats may be tested by exact match.
      */
-    @link(LinkResolver.id) Either!(None, string, string[], Expression) format_;
+    @link(LinkResolver.id) Union!(None, string, string[], Expression) format_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -3047,7 +3060,7 @@ class WorkflowInputParameter : SchemaBase
      * expressions.  If the size of the file is greater than 64 KiB,
      * the implementation must raise a fatal error.
      */
-    Either!(None, bool) loadContents_;
+    Union!(None, bool) loadContents_;
     /**
      * Only valid when `type: Directory` or is an array of `items: Directory`.
      * 
@@ -3060,23 +3073,23 @@ class WorkflowInputParameter : SchemaBase
      *   2. Inherited from `LoadListingRequirement`
      *   3. By default: `no_listing`
      */
-    Either!(None, LoadListingEnum) loadListing_;
+    Union!(None, LoadListingEnum) loadListing_;
     /**
      * The default value to use for this parameter if the parameter is missing
      * from the input object, or if the value of the parameter in the input
      * object is `null`.  Default values are applied before evaluating expressions
      * (e.g. dependent `valueFrom` fields).
      */
-    Either!(None, File, Directory, Any) default_;
+    Union!(None, File, Directory, Any) default_;
     /**
      * Specify valid types of data that may be assigned to this parameter.
      */
-    @typeDSL Either!(CWLType, InputRecordSchema, InputEnumSchema, InputArraySchema, string, Either!(CWLType, InputRecordSchema, InputEnumSchema, InputArraySchema, string)[]) type_;
+    @typeDSL Union!(CWLType, InputRecordSchema, InputEnumSchema, InputArraySchema, string, Union!(CWLType, InputRecordSchema, InputEnumSchema, InputArraySchema, string)[]) type_;
     /**
      * Deprecated.  Preserved for v1.0 backwards compatibility.  Will be removed in
      * CWL v2.0.  Use `WorkflowInputParameter.loadContents` instead.
      */
-    Either!(None, InputBinding) inputBinding_;
+    Union!(None, InputBinding) inputBinding_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -3100,15 +3113,15 @@ class WorkflowInputParameter : SchemaBase
      * Only useful for `$graph` at `Process` level. Should not be exposed
      * to users in graphical or terminal user interfaces.
      */
-    @id Either!(None, string) id_;
+    @id Union!(None, string) id_;
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
+    Union!(None, string, string[]) doc_;
     /**
      * Defines the input parameters of the process.  The process is ready to
      * run when all required input parameters are associated with concrete
@@ -3136,23 +3149,24 @@ class WorkflowInputParameter : SchemaBase
      * error and the implementation must not attempt to run the process,
      * unless overridden at user option.
      */
-    @idMap("class") Either!(None, Either!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement)[]) requirements_;
+    @idMap("class") Union!(None, Union!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement)[]) requirements_;
     /**
      * Declares hints applying to either the runtime environment or the
      * workflow engine that may be helpful in executing this process.  It is
      * not an error if an implementation cannot satisfy all hints, however
      * the implementation may report a warning.
      */
-    @idMap("class") Either!(None, Either!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement, Any)[]) hints_;
+    @idMap("class") Union!(None, Union!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement, Any)[]) hints_;
     /**
      * CWL document version. Always required at the document root. Not
      * required for a Process embedded inside another Process.
      */
-    Either!(None, CWLVersion) cwlVersion_;
+    Union!(None, CWLVersion) cwlVersion_;
     /**
      * An identifier for the type of computational operation, of this Process.
-     * Especially useful for "class: Operation", but can also be used for
-     * CommandLineTool, Workflow, or ExpressionTool.
+     * Especially useful for [`Operation`](Workflow.html#Operation), but can also be used for
+     * [`CommandLineTool`](CommandLineTool.html#CommandLineTool),
+     * [`Workflow`](Workflow.html#Workflow), or [ExpressionTool](Workflow.html#ExpressionTool).
      * 
      * If provided, then this must be an IRI of a concept node that
      * represents the type of operation, preferably defined within an ontology.
@@ -3164,7 +3178,7 @@ class WorkflowInputParameter : SchemaBase
      * specific Operation concept like
      * [Split read mapping](http://edamontology.org/operation_3199).
      */
-    @link(LinkResolver.id) Either!(None, string[]) intent_;
+    @link(LinkResolver.id) Union!(None, string[]) intent_;
     ///
     static immutable class_ = "ExpressionTool";
     /**
@@ -3232,7 +3246,7 @@ class WorkflowOutputParameter : SchemaBase
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -3276,7 +3290,7 @@ class WorkflowOutputParameter : SchemaBase
      *     extensions, the path is unchanged.
      *   3. Append the remainder of the string to the end of the file path.
      */
-    @secondaryFilesDSL Either!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
+    @secondaryFilesDSL Union!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -3285,22 +3299,22 @@ class WorkflowOutputParameter : SchemaBase
      * indicate whether it is valid to stream file contents using a named
      * pipe.  Default: `false`.
      */
-    Either!(None, bool) streamable_;
+    Union!(None, bool) streamable_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
+    Union!(None, string, string[]) doc_;
     /**
      * The unique identifier for this object.
      */
-    @id Either!(None, string) id_;
+    @id Union!(None, string) id_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
      * This is the file format that will be assigned to the output
      * File object.
      */
-    @link(LinkResolver.id) Either!(None, string, Expression) format_;
+    @link(LinkResolver.id) Union!(None, string, Expression) format_;
     /**
      * Specifies one or more names of an output from a workflow step (in the form
      * `step_name/output_name` with a `/` separator`), or a workflow input name,
@@ -3308,20 +3322,20 @@ class WorkflowOutputParameter : SchemaBase
      * the output parameter.  It is valid to reference workflow level inputs
      * here.
      */
-    @link() Either!(None, string, string[]) outputSource_;
+    @link() Union!(None, string, string[]) outputSource_;
     /**
      * The method to use to merge multiple sources into a single array.
      * If not specified, the default method is "merge_nested".
      */
-    Either!(None, LinkMergeMethod) linkMerge_;
+    Union!(None, LinkMergeMethod) linkMerge_;
     /**
      * The method to use to choose non-null elements among multiple sources.
      */
-    Either!(None, PickValueMethod) pickValue_;
+    Union!(None, PickValueMethod) pickValue_;
     /**
      * Specify valid types of data that may be assigned to this parameter.
      */
-    @typeDSL Either!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string, Either!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string)[]) type_;
+    @typeDSL Union!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string, Union!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string)[]) type_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -3443,21 +3457,21 @@ class WorkflowStepInput : SchemaBase
     /**
      * The unique identifier for this object.
      */
-    @id Either!(None, string) id_;
+    @id Union!(None, string) id_;
     /**
      * Specifies one or more workflow parameters that will provide input to
      * the underlying step parameter.
      */
-    @link() Either!(None, string, string[]) source_;
+    @link() Union!(None, string, string[]) source_;
     /**
      * The method to use to merge multiple inbound links into a single array.
      * If not specified, the default method is "merge_nested".
      */
-    Either!(None, LinkMergeMethod) linkMerge_;
+    Union!(None, LinkMergeMethod) linkMerge_;
     /**
      * The method to use to choose non-null elements among multiple sources.
      */
-    Either!(None, PickValueMethod) pickValue_;
+    Union!(None, PickValueMethod) pickValue_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -3468,7 +3482,7 @@ class WorkflowStepInput : SchemaBase
      * expressions.  If the size of the file is greater than 64 KiB,
      * the implementation must raise a fatal error.
      */
-    Either!(None, bool) loadContents_;
+    Union!(None, bool) loadContents_;
     /**
      * Only valid when `type: Directory` or is an array of `items: Directory`.
      * 
@@ -3481,17 +3495,17 @@ class WorkflowStepInput : SchemaBase
      *   2. Inherited from `LoadListingRequirement`
      *   3. By default: `no_listing`
      */
-    Either!(None, LoadListingEnum) loadListing_;
+    Union!(None, LoadListingEnum) loadListing_;
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * The default value for this parameter to use if either there is no
      * `source` field, or the value produced by the `source` is `null`.  The
      * default must be applied prior to scattering or evaluating `valueFrom`.
      */
-    Either!(None, File, Directory, Any) default_;
+    Union!(None, File, Directory, Any) default_;
     /**
      * To use valueFrom, [StepInputExpressionRequirement](#StepInputExpressionRequirement) must
      * be specified in the workflow or workflow step requirements.
@@ -3516,7 +3530,7 @@ class WorkflowStepInput : SchemaBase
      * result of evaluating `valueFrom` on a parameter must not be visible to
      * evaluation of `valueFrom` on other parameters.
      */
-    Either!(None, string, Expression) valueFrom_;
+    Union!(None, string, Expression) valueFrom_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -3538,7 +3552,7 @@ class WorkflowStepOutput : SchemaBase
     /**
      * The unique identifier for this object.
      */
-    @id Either!(None, string) id_;
+    @id Union!(None, string) id_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -3651,15 +3665,15 @@ class WorkflowStep : SchemaBase
     /**
      * The unique identifier for this object.
      */
-    @id Either!(None, string) id_;
+    @id Union!(None, string) id_;
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
+    Union!(None, string, string[]) doc_;
     /**
      * Defines the input parameters of the workflow step.  The process is ready to
      * run when all required input parameters are associated with concrete
@@ -3672,7 +3686,7 @@ class WorkflowStep : SchemaBase
      * Defines the parameters representing the output of the process.  May be
      * used to generate and/or validate the output object.
      */
-    @link(LinkResolver.id) Either!(Either!(string, WorkflowStepOutput)[]) out_;
+    @link(LinkResolver.id) Union!(Union!(string, WorkflowStepOutput)[]) out_;
     /**
      * Declares requirements that apply to either the runtime environment or the
      * workflow engine that must be met in order to execute this workflow step.  If
@@ -3681,31 +3695,31 @@ class WorkflowStep : SchemaBase
      * error and the implementation must not attempt to run the process,
      * unless overridden at user option.
      */
-    @idMap("class") Either!(None, Either!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement)[]) requirements_;
+    @idMap("class") Union!(None, Union!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement)[]) requirements_;
     /**
      * Declares hints applying to either the runtime environment or the
      * workflow engine that may be helpful in executing this workflow step.  It is
      * not an error if an implementation cannot satisfy all hints, however
      * the implementation may report a warning.
      */
-    @idMap("class") Either!(None, Any[]) hints_;
+    @idMap("class") Union!(None, Any[]) hints_;
     /**
      * Specifies the process to run.  If `run` is a string, it must be an absolute IRI
      * or a relative path from the primary document.
      */
-    @link() Either!(string, CommandLineTool, ExpressionTool, Workflow, Operation) run_;
+    @link() Union!(string, CommandLineTool, ExpressionTool, Workflow, Operation) run_;
     /**
      * If defined, only run the step when the expression evaluates to
      * `true`.  If `false` the step is skipped.  A skipped step
      * produces a `null` on each output.
      */
-    Either!(None, Expression) when_;
+    Union!(None, Expression) when_;
     ///
-    @link() Either!(None, string, string[]) scatter_;
+    @link() Union!(None, string, string[]) scatter_;
     /**
      * Required if `scatter` is an array of more than one element.
      */
-    Either!(None, ScatterMethod) scatterMethod_;
+    Union!(None, ScatterMethod) scatterMethod_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -3773,15 +3787,15 @@ class WorkflowStep : SchemaBase
      * Only useful for `$graph` at `Process` level. Should not be exposed
      * to users in graphical or terminal user interfaces.
      */
-    @id Either!(None, string) id_;
+    @id Union!(None, string) id_;
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
+    Union!(None, string, string[]) doc_;
     /**
      * Defines the input parameters of the process.  The process is ready to
      * run when all required input parameters are associated with concrete
@@ -3809,23 +3823,24 @@ class WorkflowStep : SchemaBase
      * error and the implementation must not attempt to run the process,
      * unless overridden at user option.
      */
-    @idMap("class") Either!(None, Either!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement)[]) requirements_;
+    @idMap("class") Union!(None, Union!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement)[]) requirements_;
     /**
      * Declares hints applying to either the runtime environment or the
      * workflow engine that may be helpful in executing this process.  It is
      * not an error if an implementation cannot satisfy all hints, however
      * the implementation may report a warning.
      */
-    @idMap("class") Either!(None, Either!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement, Any)[]) hints_;
+    @idMap("class") Union!(None, Union!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement, Any)[]) hints_;
     /**
      * CWL document version. Always required at the document root. Not
      * required for a Process embedded inside another Process.
      */
-    Either!(None, CWLVersion) cwlVersion_;
+    Union!(None, CWLVersion) cwlVersion_;
     /**
      * An identifier for the type of computational operation, of this Process.
-     * Especially useful for "class: Operation", but can also be used for
-     * CommandLineTool, Workflow, or ExpressionTool.
+     * Especially useful for [`Operation`](Workflow.html#Operation), but can also be used for
+     * [`CommandLineTool`](CommandLineTool.html#CommandLineTool),
+     * [`Workflow`](Workflow.html#Workflow), or [ExpressionTool](Workflow.html#ExpressionTool).
      * 
      * If provided, then this must be an IRI of a concept node that
      * represents the type of operation, preferably defined within an ontology.
@@ -3837,7 +3852,7 @@ class WorkflowStep : SchemaBase
      * specific Operation concept like
      * [Split read mapping](http://edamontology.org/operation_3199).
      */
-    @link(LinkResolver.id) Either!(None, string[]) intent_;
+    @link(LinkResolver.id) Union!(None, string[]) intent_;
     ///
     static immutable class_ = "Workflow";
     /**
@@ -3846,7 +3861,7 @@ class WorkflowStep : SchemaBase
      * the steps in a different order than listed and/or execute steps
      * concurrently, provided that dependencies between steps are met.
      */
-    @idMap("id") Either!(WorkflowStep[]) steps_;
+    @idMap("id") Union!(WorkflowStep[]) steps_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -3925,7 +3940,7 @@ class OperationInputParameter : SchemaBase
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -3969,7 +3984,7 @@ class OperationInputParameter : SchemaBase
      *     extensions, the path is unchanged.
      *   3. Append the remainder of the string to the end of the file path.
      */
-    @secondaryFilesDSL Either!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
+    @secondaryFilesDSL Union!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -3978,15 +3993,15 @@ class OperationInputParameter : SchemaBase
      * indicate whether it is valid to stream file contents using a named
      * pipe.  Default: `false`.
      */
-    Either!(None, bool) streamable_;
+    Union!(None, bool) streamable_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
+    Union!(None, string, string[]) doc_;
     /**
      * The unique identifier for this object.
      */
-    @id Either!(None, string) id_;
+    @id Union!(None, string) id_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -3995,7 +4010,7 @@ class OperationInputParameter : SchemaBase
      * parameter, preferably defined within an ontology.  If no ontology is
      * available, file formats may be tested by exact match.
      */
-    @link(LinkResolver.id) Either!(None, string, string[], Expression) format_;
+    @link(LinkResolver.id) Union!(None, string, string[], Expression) format_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -4006,7 +4021,7 @@ class OperationInputParameter : SchemaBase
      * expressions.  If the size of the file is greater than 64 KiB,
      * the implementation must raise a fatal error.
      */
-    Either!(None, bool) loadContents_;
+    Union!(None, bool) loadContents_;
     /**
      * Only valid when `type: Directory` or is an array of `items: Directory`.
      * 
@@ -4019,18 +4034,18 @@ class OperationInputParameter : SchemaBase
      *   2. Inherited from `LoadListingRequirement`
      *   3. By default: `no_listing`
      */
-    Either!(None, LoadListingEnum) loadListing_;
+    Union!(None, LoadListingEnum) loadListing_;
     /**
      * The default value to use for this parameter if the parameter is missing
      * from the input object, or if the value of the parameter in the input
      * object is `null`.  Default values are applied before evaluating expressions
      * (e.g. dependent `valueFrom` fields).
      */
-    Either!(None, File, Directory, Any) default_;
+    Union!(None, File, Directory, Any) default_;
     /**
      * Specify valid types of data that may be assigned to this parameter.
      */
-    @typeDSL Either!(CWLType, InputRecordSchema, InputEnumSchema, InputArraySchema, string, Either!(CWLType, InputRecordSchema, InputEnumSchema, InputArraySchema, string)[]) type_;
+    @typeDSL Union!(CWLType, InputRecordSchema, InputEnumSchema, InputArraySchema, string, Union!(CWLType, InputRecordSchema, InputEnumSchema, InputArraySchema, string)[]) type_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -4045,7 +4060,7 @@ class OperationOutputParameter : SchemaBase
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -4089,7 +4104,7 @@ class OperationOutputParameter : SchemaBase
      *     extensions, the path is unchanged.
      *   3. Append the remainder of the string to the end of the file path.
      */
-    @secondaryFilesDSL Either!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
+    @secondaryFilesDSL Union!(None, SecondaryFileSchema, SecondaryFileSchema[]) secondaryFiles_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -4098,26 +4113,26 @@ class OperationOutputParameter : SchemaBase
      * indicate whether it is valid to stream file contents using a named
      * pipe.  Default: `false`.
      */
-    Either!(None, bool) streamable_;
+    Union!(None, bool) streamable_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
+    Union!(None, string, string[]) doc_;
     /**
      * The unique identifier for this object.
      */
-    @id Either!(None, string) id_;
+    @id Union!(None, string) id_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
      * This is the file format that will be assigned to the output
      * File object.
      */
-    @link(LinkResolver.id) Either!(None, string, Expression) format_;
+    @link(LinkResolver.id) Union!(None, string, Expression) format_;
     /**
      * Specify valid types of data that may be assigned to this parameter.
      */
-    @typeDSL Either!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string, Either!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string)[]) type_;
+    @typeDSL Union!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string, Union!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string)[]) type_;
 
     mixin genCtor;
     mixin genIdentifier;
@@ -4141,15 +4156,15 @@ class OperationOutputParameter : SchemaBase
      * Only useful for `$graph` at `Process` level. Should not be exposed
      * to users in graphical or terminal user interfaces.
      */
-    @id Either!(None, string) id_;
+    @id Union!(None, string) id_;
     /**
      * A short, human-readable label of this object.
      */
-    Either!(None, string) label_;
+    Union!(None, string) label_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
-    Either!(None, string, string[]) doc_;
+    Union!(None, string, string[]) doc_;
     /**
      * Defines the input parameters of the process.  The process is ready to
      * run when all required input parameters are associated with concrete
@@ -4177,23 +4192,24 @@ class OperationOutputParameter : SchemaBase
      * error and the implementation must not attempt to run the process,
      * unless overridden at user option.
      */
-    @idMap("class") Either!(None, Either!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement)[]) requirements_;
+    @idMap("class") Union!(None, Union!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement)[]) requirements_;
     /**
      * Declares hints applying to either the runtime environment or the
      * workflow engine that may be helpful in executing this process.  It is
      * not an error if an implementation cannot satisfy all hints, however
      * the implementation may report a warning.
      */
-    @idMap("class") Either!(None, Either!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement, Any)[]) hints_;
+    @idMap("class") Union!(None, Union!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement, Any)[]) hints_;
     /**
      * CWL document version. Always required at the document root. Not
      * required for a Process embedded inside another Process.
      */
-    Either!(None, CWLVersion) cwlVersion_;
+    Union!(None, CWLVersion) cwlVersion_;
     /**
      * An identifier for the type of computational operation, of this Process.
-     * Especially useful for "class: Operation", but can also be used for
-     * CommandLineTool, Workflow, or ExpressionTool.
+     * Especially useful for [`Operation`](Workflow.html#Operation), but can also be used for
+     * [`CommandLineTool`](CommandLineTool.html#CommandLineTool),
+     * [`Workflow`](Workflow.html#Workflow), or [ExpressionTool](Workflow.html#ExpressionTool).
      * 
      * If provided, then this must be an IRI of a concept node that
      * represents the type of operation, preferably defined within an ontology.
@@ -4205,7 +4221,7 @@ class OperationOutputParameter : SchemaBase
      * specific Operation concept like
      * [Split read mapping](http://edamontology.org/operation_3199).
      */
-    @link(LinkResolver.id) Either!(None, string[]) intent_;
+    @link(LinkResolver.id) Union!(None, string[]) intent_;
     ///
     static immutable class_ = "Operation";
 
@@ -4215,7 +4231,7 @@ class OperationOutputParameter : SchemaBase
 }
 
 ///
-alias DocumentRootType = Either!(CommandLineTool, ExpressionTool, Workflow, Operation);
+alias DocumentRootType = Union!(CommandLineTool, ExpressionTool, Workflow, Operation);
 
 ///
 alias importFromURI = import_!DocumentRootType;

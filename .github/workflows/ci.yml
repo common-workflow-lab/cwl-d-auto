@@ -31,7 +31,7 @@ jobs:
   test:
     strategy:
       matrix:
-        dc: [dmd-2.102.2, ldc-1.32.1]
+        dc: [dmd-2.107.1, ldc-1.37.0]
         experimental: [false]
         include:
           - dc: dmd-master
@@ -40,7 +40,7 @@ jobs:
     continue-on-error: ${{ matrix.experimental }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 1
       - uses: dlang-community/setup-dlang@v1
@@ -54,7 +54,7 @@ jobs:
     needs: [info, test]
     if: github.event_name == 'push' && needs.info.outputs.has_tag == 'true'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 1
       - uses: softprops/action-gh-release@v1

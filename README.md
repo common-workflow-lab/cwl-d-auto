@@ -25,7 +25,7 @@ Each parser is generated with [schema-salad-tool](https://github.com/common-work
 
 - CWL v1.2
   ```console
-  $ schema-salad-tool --codegen dlang https://github.com/common-workflow-language/cwl-v1.2/raw/1.2.1_proposed/CommonWorkflowLanguage.yml --codegen-package cwl.v1_2 --codegen-parser-info "CWL v1.2 parser generated with schema-salad-tool" --codegen-examples resources/cwl-v1.2 > v1_2.d
+  $ schema-salad-tool --codegen dlang https://github.com/common-workflow-language/cwl-v1.2/raw/codegen/CommonWorkflowLanguage.yml --codegen-package cwl.v1_2 --codegen-parser-info "CWL v1.2 parser generated with schema-salad-tool" --codegen-examples resources/cwl-v1.2 > v1_2.d
   ```
 
 - You can specify the package name via `--codegen-package`.

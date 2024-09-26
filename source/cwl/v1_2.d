@@ -6,25 +6,26 @@
  * The embedded document is subject to the license of the original schema.
  * 
  * License: Apache-2.0
- * Date: 2023-08-14
+ * Date: 2024-09-26
  */
 module cwl.v1_2;
 
-import salad.meta.dumper : genDumper;
-import salad.meta.impl : genCtor_, genIdentifier, genOpEq;
+import salad.meta.impl : genBody_;
 import salad.meta.parser : import_ = importFromURI;
-import salad.meta.uda : documentRoot, id, idMap, link, LinkResolver, secondaryFilesDSL, typeDSL;
-import salad.primitives : SchemaBase;
+import salad.meta.uda : defaultValue, documentRoot, id, idMap, link, LinkResolver, secondaryFilesDSL, typeDSL;
+import salad.primitives : EnumSchemaBase, MapSchemaBase, RecordSchemaBase, UnionSchemaBase;
 import salad.type : None, Union;
 
 /// parser information
 enum parserInfo = "CWL v1.2 parser generated with schema-salad-tool";
 
-enum saladVersion = "v1.1";
+// Modified until the following pull request is merged
+// See_Also: https://github.com/common-workflow-language/schema_salad/pull/861
+enum saladVersion = "v1.3";
 
-mixin template genCtor()
+mixin template genBody()
 {
-    mixin genCtor_!saladVersion;
+    mixin genBody_!saladVersion;
 }
 
 /**
@@ -41,7 +42,7 @@ mixin template genCtor()
  * double: double precision (64-bit) IEEE 754 floating-point number
  * string: Unicode character sequence
  */
-class PrimitiveType : SchemaBase
+class PrimitiveType : EnumSchemaBase
 {
     ///
     enum Symbol
@@ -57,9 +58,7 @@ class PrimitiveType : SchemaBase
 
     Symbol value;
 
-    mixin genCtor;
-    mixin genOpEq;
-    mixin genDumper;
+    mixin genBody;
 }
 
 ///
@@ -68,7 +67,7 @@ public import salad.primitives : Any;
 /**
  * A field of a record.
  */
-class RecordField : SchemaBase
+class RecordField : RecordSchemaBase
 {
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
@@ -79,17 +78,17 @@ class RecordField : SchemaBase
      */
     @id string name_;
     /**
-     * The field type
+     * The field type. If it is an array, it indicates
+     * that the field type is a union type of its elements.
+     * Its elements may be duplicated.
      */
-    @typeDSL Union!(PrimitiveType, RecordSchema, EnumSchema, ArraySchema, string, Union!(PrimitiveType, RecordSchema, EnumSchema, ArraySchema, string)[]) type_;
+    @typeDSL Union!(PrimitiveType, RecordSchema, EnumSchema, ArraySchema, MapSchema, UnionSchema, string, Union!(PrimitiveType, RecordSchema, EnumSchema, ArraySchema, MapSchema, UnionSchema, string)[]) type_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 ///
-class RecordSchema : SchemaBase
+class RecordSchema : RecordSchemaBase
 {
     /**
      * Defines the fields of the record.
@@ -100,15 +99,13 @@ class RecordSchema : SchemaBase
      */
     static immutable type_ = "record";
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
  * Define an enumerated type.
  */
-class EnumSchema : SchemaBase
+class EnumSchema : RecordSchemaBase
 {
     ///
     @id Union!(None, string) name_;
@@ -121,63 +118,52 @@ class EnumSchema : SchemaBase
      */
     static immutable type_ = "enum";
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 ///
-class ArraySchema : SchemaBase
+class ArraySchema : RecordSchemaBase
 {
     /**
      * Defines the type of the array elements.
      */
-    Union!(PrimitiveType, RecordSchema, EnumSchema, ArraySchema, string, Union!(PrimitiveType, RecordSchema, EnumSchema, ArraySchema, string)[]) items_;
+    Union!(PrimitiveType, RecordSchema, EnumSchema, ArraySchema, MapSchema, UnionSchema, string, Union!(PrimitiveType, RecordSchema, EnumSchema, ArraySchema, MapSchema, UnionSchema, string)[]) items_;
     /**
      * Must be `array`
      */
     static immutable type_ = "array";
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
-/**
- * Version symbols for published CWL document versions.
- */
-class CWLVersion : SchemaBase
+///
+class MapSchema : RecordSchemaBase
 {
-    ///
-    enum Symbol
-    {
-        s0 = "draft-2", ///
-        s1 = "draft-3.dev1", ///
-        s2 = "draft-3.dev2", ///
-        s3 = "draft-3.dev3", ///
-        s4 = "draft-3.dev4", ///
-        s5 = "draft-3.dev5", ///
-        s6 = "draft-3", ///
-        s7 = "draft-4.dev1", ///
-        s8 = "draft-4.dev2", ///
-        s9 = "draft-4.dev3", ///
-        s10 = "v1.0.dev4", ///
-        s11 = "v1.0", ///
-        s12 = "v1.1.0-dev1", ///
-        s13 = "v1.1", ///
-        s14 = "v1.2.0-dev1", ///
-        s15 = "v1.2.0-dev2", ///
-        s16 = "v1.2.0-dev3", ///
-        s17 = "v1.2.0-dev4", ///
-        s18 = "v1.2.0-dev5", ///
-        s19 = "v1.2", ///
-    }
+    /**
+     * Must be `map`
+     */
+    static immutable type_ = "map";
+    /**
+     * Defines the type of the map elements.
+     */
+    Union!(PrimitiveType, RecordSchema, EnumSchema, ArraySchema, MapSchema, UnionSchema, string, Union!(PrimitiveType, RecordSchema, EnumSchema, ArraySchema, MapSchema, UnionSchema, string)[]) values_;
 
-    Symbol value;
+    mixin genBody;
+}
 
-    mixin genCtor;
-    mixin genOpEq;
-    mixin genDumper;
+///
+class UnionSchema : RecordSchemaBase
+{
+    /**
+     * Defines the type of the union elements.
+     */
+    Union!(PrimitiveType, RecordSchema, EnumSchema, ArraySchema, MapSchema, UnionSchema, string, Union!(PrimitiveType, RecordSchema, EnumSchema, ArraySchema, MapSchema, UnionSchema, string)[]) names_;
+    /**
+     * Must be `union`
+     */
+    static immutable type_ = "union";
+
+    mixin genBody;
 }
 
 /**
@@ -185,7 +171,7 @@ class CWLVersion : SchemaBase
  * File: A File object
  * Directory: A Directory object
  */
-class CWLType : SchemaBase
+class CWLType : EnumSchemaBase
 {
     ///
     enum Symbol
@@ -203,9 +189,56 @@ class CWLType : SchemaBase
 
     Symbol value;
 
-    mixin genCtor;
-    mixin genOpEq;
-    mixin genDumper;
+    mixin genBody;
+}
+
+///
+class CWLArraySchema : RecordSchemaBase
+{
+    /**
+     * Defines the type of the array elements.
+     */
+    Union!(PrimitiveType, CWLRecordSchema, EnumSchema, CWLArraySchema, string, Union!(PrimitiveType, CWLRecordSchema, EnumSchema, CWLArraySchema, string)[]) items_;
+    /**
+     * Must be `array`
+     */
+    static immutable type_ = "array";
+
+    mixin genBody;
+}
+
+///
+class CWLRecordField : RecordSchemaBase
+{
+    /**
+     * A documentation string for this object, or an array of strings which should be concatenated.
+     */
+    Union!(None, string, string[]) doc_;
+    /**
+     * The name of the field
+     */
+    @id string name_;
+    /**
+     * The field type
+     */
+    @typeDSL Union!(PrimitiveType, CWLRecordSchema, EnumSchema, CWLArraySchema, string, Union!(PrimitiveType, CWLRecordSchema, EnumSchema, CWLArraySchema, string)[]) type_;
+
+    mixin genBody;
+}
+
+///
+class CWLRecordSchema : RecordSchemaBase
+{
+    /**
+     * Defines the fields of the record.
+     */
+    @idMap("name", "type") Union!(None, CWLRecordField[]) fields_;
+    /**
+     * Must be `record`
+     */
+    static immutable type_ = "record";
+
+    mixin genBody;
 }
 
 /**
@@ -276,7 +309,7 @@ class CWLType : SchemaBase
  * An ExpressionTool may forward file references from input to output by using
  * the same value for `location`.
  */
-class File : SchemaBase
+class File : RecordSchemaBase
 {
     /**
      * Must be `File` to indicate this object describes a file.
@@ -427,9 +460,7 @@ class File : SchemaBase
      */
     Union!(None, string) contents_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
@@ -477,7 +508,7 @@ class File : SchemaBase
  * Name conflicts (the same `basename` appearing multiple times in `listing`
  * or in any entry in `secondaryFiles` in the listing) is a fatal error.
  */
-class Directory : SchemaBase
+class Directory : RecordSchemaBase
 {
     /**
      * Must be `Directory` to indicate this object describes a Directory.
@@ -543,9 +574,64 @@ class Directory : SchemaBase
      */
     Union!(None, Union!(File, Directory)[]) listing_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
+}
+
+/**
+ * Generic type representing a valid CWL object. It is used to represent
+ * `default` values passed to CWL `InputParameter` and `WorkflowStepInput`
+ * record fields.
+ */
+class CWLObjectType : UnionSchemaBase
+{
+    Union!(bool, int, long, float, double, string, File, Directory, Union!(None, CWLObjectType)[], CWLObjectType[string]) payload;
+
+    mixin genBody;
+}
+
+/**
+ * Type representing a valid CWL input file as a `map<string, union<array<ProcessRequirement>, CWLObjectType>>`.
+ */
+class CWLInputFile : MapSchemaBase
+{
+    Union!(Union!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement)[], CWLObjectType)[string] payload;
+
+    mixin genBody;
+}
+
+/**
+ * Version symbols for published CWL document versions.
+ */
+class CWLVersion : EnumSchemaBase
+{
+    ///
+    enum Symbol
+    {
+        s0 = "draft-2", ///
+        s1 = "draft-3.dev1", ///
+        s2 = "draft-3.dev2", ///
+        s3 = "draft-3.dev3", ///
+        s4 = "draft-3.dev4", ///
+        s5 = "draft-3.dev5", ///
+        s6 = "draft-3", ///
+        s7 = "draft-4.dev1", ///
+        s8 = "draft-4.dev2", ///
+        s9 = "draft-4.dev3", ///
+        s10 = "v1.0.dev4", ///
+        s11 = "v1.0", ///
+        s12 = "v1.1.0-dev1", ///
+        s13 = "v1.1", ///
+        s14 = "v1.2.0-dev1", ///
+        s15 = "v1.2.0-dev2", ///
+        s16 = "v1.2.0-dev3", ///
+        s17 = "v1.2.0-dev4", ///
+        s18 = "v1.2.0-dev5", ///
+        s19 = "v1.2", ///
+    }
+
+    Symbol value;
+
+    mixin genBody;
 }
 
 /**
@@ -556,7 +642,7 @@ class Directory : SchemaBase
  * shallow_listing: Only load the top level listing, do not recurse into subdirectories.
  * deep_listing: Load the directory listing and recursively load all subdirectories as well.
  */
-class LoadListingEnum : SchemaBase
+class LoadListingEnum : EnumSchemaBase
 {
     ///
     enum Symbol
@@ -568,16 +654,14 @@ class LoadListingEnum : SchemaBase
 
     Symbol value;
 
-    mixin genCtor;
-    mixin genOpEq;
-    mixin genDumper;
+    mixin genBody;
 }
 
 ///
 public import salad.primitives : Expression;
 
 ///
-class InputBinding : SchemaBase
+class InputBinding : RecordSchemaBase
 {
     /**
      * Use of `loadContents` in `InputBinding` is deprecated.
@@ -586,13 +670,11 @@ class InputBinding : SchemaBase
      */
     Union!(None, bool) loadContents_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 ///
-class InputRecordField : SchemaBase
+class InputRecordField : RecordSchemaBase
 {
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
@@ -662,7 +744,7 @@ class InputRecordField : SchemaBase
      * indicate whether it is valid to stream file contents using a named
      * pipe.  Default: `false`.
      */
-    Union!(None, bool) streamable_;
+    @defaultValue(q"<false>") bool streamable_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -697,13 +779,11 @@ class InputRecordField : SchemaBase
      */
     Union!(None, LoadListingEnum) loadListing_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 ///
-class InputRecordSchema : SchemaBase
+class InputRecordSchema : RecordSchemaBase
 {
     /**
      * Defines the fields of the record.
@@ -726,13 +806,11 @@ class InputRecordSchema : SchemaBase
      */
     @id Union!(None, string) name_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 ///
-class InputEnumSchema : SchemaBase
+class InputEnumSchema : RecordSchemaBase
 {
     /**
      * The identifier for this type
@@ -755,13 +833,11 @@ class InputEnumSchema : SchemaBase
      */
     Union!(None, string, string[]) doc_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 ///
-class InputArraySchema : SchemaBase
+class InputArraySchema : RecordSchemaBase
 {
     /**
      * Defines the type of the array elements.
@@ -784,13 +860,11 @@ class InputArraySchema : SchemaBase
      */
     @id Union!(None, string) name_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 ///
-class OutputRecordField : SchemaBase
+class OutputRecordField : RecordSchemaBase
 {
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
@@ -860,7 +934,7 @@ class OutputRecordField : SchemaBase
      * indicate whether it is valid to stream file contents using a named
      * pipe.  Default: `false`.
      */
-    Union!(None, bool) streamable_;
+    @defaultValue(q"<false>") bool streamable_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -869,13 +943,11 @@ class OutputRecordField : SchemaBase
      */
     @link(LinkResolver.id) Union!(None, string, Expression) format_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 ///
-class OutputRecordSchema : SchemaBase
+class OutputRecordSchema : RecordSchemaBase
 {
     /**
      * Defines the fields of the record.
@@ -898,13 +970,11 @@ class OutputRecordSchema : SchemaBase
      */
     @id Union!(None, string) name_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 ///
-class OutputEnumSchema : SchemaBase
+class OutputEnumSchema : RecordSchemaBase
 {
     /**
      * The identifier for this type
@@ -927,13 +997,11 @@ class OutputEnumSchema : SchemaBase
      */
     Union!(None, string, string[]) doc_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 ///
-class OutputArraySchema : SchemaBase
+class OutputArraySchema : RecordSchemaBase
 {
     /**
      * Defines the type of the array elements.
@@ -956,9 +1024,7 @@ class OutputArraySchema : SchemaBase
      */
     @id Union!(None, string) name_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
@@ -966,7 +1032,7 @@ class OutputArraySchema : SchemaBase
  * If this requirement is not present, the workflow platform must not perform expression
  * interpolation.
  */
-class InlineJavascriptRequirement : SchemaBase
+class InlineJavascriptRequirement : RecordSchemaBase
 {
     /**
      * Always 'InlineJavascriptRequirement'
@@ -979,9 +1045,7 @@ class InlineJavascriptRequirement : SchemaBase
      */
     Union!(None, string[]) expressionLib_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
@@ -998,7 +1062,7 @@ class InlineJavascriptRequirement : SchemaBase
  *   `$include`-ing them in the `types` field.
  * - A file can contain a list of type definitions
  */
-class SchemaDefRequirement : SchemaBase
+class SchemaDefRequirement : RecordSchemaBase
 {
     /**
      * Always 'SchemaDefRequirement'
@@ -1009,9 +1073,7 @@ class SchemaDefRequirement : SchemaBase
      */
     Union!(CommandInputRecordSchema, CommandInputEnumSchema, CommandInputArraySchema)[] types_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
@@ -1029,7 +1091,7 @@ class SchemaDefRequirement : SchemaBase
  * [this section](SchemaSalad.html#Domain_Specific_Language_for_secondary_files)
  * in the Schema Salad specification.
  */
-class SecondaryFileSchema : SchemaBase
+class SecondaryFileSchema : RecordSchemaBase
 {
     /**
      * Provides a pattern or expression specifying files or directories that
@@ -1092,16 +1154,14 @@ class SecondaryFileSchema : SchemaBase
      */
     Union!(None, bool, Expression) required_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
  * Specify the desired behavior for loading the `listing` field of
  * a Directory object for use by expressions.
  */
-class LoadListingRequirement : SchemaBase
+class LoadListingRequirement : RecordSchemaBase
 {
     /**
      * Always 'LoadListingRequirement'
@@ -1110,9 +1170,7 @@ class LoadListingRequirement : SchemaBase
     ///
     Union!(None, LoadListingEnum) loadListing_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
@@ -1120,7 +1178,7 @@ class LoadListingRequirement : SchemaBase
  * by the workflow platform when executing the command line tool.  May be the
  * result of executing an expression, such as getting a parameter from input.
  */
-class EnvironmentDef : SchemaBase
+class EnvironmentDef : RecordSchemaBase
 {
     /**
      * The environment variable name
@@ -1131,9 +1189,7 @@ class EnvironmentDef : SchemaBase
      */
     Union!(string, Expression) envValue_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
@@ -1173,7 +1229,7 @@ class EnvironmentDef : SchemaBase
  * 
  *   - **null**: Add nothing.
  */
-class CommandLineBinding : SchemaBase
+class CommandLineBinding : RecordSchemaBase
 {
     /**
      * Use of `loadContents` in `InputBinding` is deprecated.
@@ -1190,7 +1246,7 @@ class CommandLineBinding : SchemaBase
      * applied before evaluating the expression. Expressions must return a
      * single value of type int or a null.
      */
-    Union!(None, int, Expression) position_;
+    @defaultValue(q"<0>") Union!(int, Expression) position_;
     /**
      * Command line prefix to add before the value.
      */
@@ -1200,7 +1256,7 @@ class CommandLineBinding : SchemaBase
      * command line arguments; if false, prefix and value must be concatenated
      * into a single command line argument.
      */
-    Union!(None, bool) separate_;
+    @defaultValue(q"<true>") bool separate_;
     /**
      * Join the array elements into a single string with the elements
      * separated by `itemSeparator`.
@@ -1233,11 +1289,9 @@ class CommandLineBinding : SchemaBase
      * If `shellQuote` is true or not provided, the implementation must not
      * permit interpretation of any shell metacharacters or directives.
      */
-    Union!(None, bool) shellQuote_;
+    @defaultValue(q"<true>") bool shellQuote_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
@@ -1252,7 +1306,7 @@ class CommandLineBinding : SchemaBase
  *   - outputEval
  *   - secondaryFiles
  */
-class CommandOutputBinding : SchemaBase
+class CommandOutputBinding : RecordSchemaBase
 {
     /**
      * Only valid when `type: File` or is an array of `items: File`.
@@ -1339,26 +1393,22 @@ class CommandOutputBinding : SchemaBase
      */
     Union!(None, Expression) outputEval_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 ///
-class CommandLineBindable : SchemaBase
+class CommandLineBindable : RecordSchemaBase
 {
     /**
      * Describes how to turn this object into command line arguments.
      */
     Union!(None, CommandLineBinding) inputBinding_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 ///
-class CommandInputRecordField : SchemaBase
+class CommandInputRecordField : RecordSchemaBase
 {
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
@@ -1428,7 +1478,7 @@ class CommandInputRecordField : SchemaBase
      * indicate whether it is valid to stream file contents using a named
      * pipe.  Default: `false`.
      */
-    Union!(None, bool) streamable_;
+    @defaultValue(q"<false>") bool streamable_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -1467,13 +1517,11 @@ class CommandInputRecordField : SchemaBase
      */
     Union!(None, CommandLineBinding) inputBinding_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 ///
-class CommandInputRecordSchema : SchemaBase
+class CommandInputRecordSchema : RecordSchemaBase
 {
     /**
      * Defines the fields of the record.
@@ -1500,13 +1548,11 @@ class CommandInputRecordSchema : SchemaBase
      */
     Union!(None, CommandLineBinding) inputBinding_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 ///
-class CommandInputEnumSchema : SchemaBase
+class CommandInputEnumSchema : RecordSchemaBase
 {
     /**
      * The identifier for this type
@@ -1533,13 +1579,11 @@ class CommandInputEnumSchema : SchemaBase
      */
     Union!(None, CommandLineBinding) inputBinding_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 ///
-class CommandInputArraySchema : SchemaBase
+class CommandInputArraySchema : RecordSchemaBase
 {
     /**
      * Defines the type of the array elements.
@@ -1566,13 +1610,11 @@ class CommandInputArraySchema : SchemaBase
      */
     Union!(None, CommandLineBinding) inputBinding_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 ///
-class CommandOutputRecordField : SchemaBase
+class CommandOutputRecordField : RecordSchemaBase
 {
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
@@ -1642,7 +1684,7 @@ class CommandOutputRecordField : SchemaBase
      * indicate whether it is valid to stream file contents using a named
      * pipe.  Default: `false`.
      */
-    Union!(None, bool) streamable_;
+    @defaultValue(q"<false>") bool streamable_;
     /**
      * Only valid when `type: File` or is an array of `items: File`.
      * 
@@ -1656,13 +1698,11 @@ class CommandOutputRecordField : SchemaBase
      */
     Union!(None, CommandOutputBinding) outputBinding_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 ///
-class CommandOutputRecordSchema : SchemaBase
+class CommandOutputRecordSchema : RecordSchemaBase
 {
     /**
      * Defines the fields of the record.
@@ -1685,13 +1725,11 @@ class CommandOutputRecordSchema : SchemaBase
      */
     @id Union!(None, string) name_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 ///
-class CommandOutputEnumSchema : SchemaBase
+class CommandOutputEnumSchema : RecordSchemaBase
 {
     /**
      * The identifier for this type
@@ -1714,13 +1752,11 @@ class CommandOutputEnumSchema : SchemaBase
      */
     Union!(None, string, string[]) doc_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 ///
-class CommandOutputArraySchema : SchemaBase
+class CommandOutputArraySchema : RecordSchemaBase
 {
     /**
      * Defines the type of the array elements.
@@ -1743,15 +1779,13 @@ class CommandOutputArraySchema : SchemaBase
      */
     @id Union!(None, string) name_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
  * An input parameter for a CommandLineTool.
  */
-class CommandInputParameter : SchemaBase
+class CommandInputParameter : RecordSchemaBase
 {
     /**
      * A short, human-readable label of this object.
@@ -1809,7 +1843,7 @@ class CommandInputParameter : SchemaBase
      * indicate whether it is valid to stream file contents using a named
      * pipe.  Default: `false`.
      */
-    Union!(None, bool) streamable_;
+    @defaultValue(q"<false>") bool streamable_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
@@ -1857,7 +1891,7 @@ class CommandInputParameter : SchemaBase
      * object is `null`.  Default values are applied before evaluating expressions
      * (e.g. dependent `valueFrom` fields).
      */
-    Union!(None, File, Directory, Any) default_;
+    Union!(None, CWLObjectType) default_;
     /**
      * Specify valid types of data that may be assigned to this parameter.
      */
@@ -1868,15 +1902,13 @@ class CommandInputParameter : SchemaBase
      */
     Union!(None, CommandLineBinding) inputBinding_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
  * An output parameter for a CommandLineTool.
  */
-class CommandOutputParameter : SchemaBase
+class CommandOutputParameter : RecordSchemaBase
 {
     /**
      * A short, human-readable label of this object.
@@ -1934,7 +1966,7 @@ class CommandOutputParameter : SchemaBase
      * indicate whether it is valid to stream file contents using a named
      * pipe.  Default: `false`.
      */
-    Union!(None, bool) streamable_;
+    @defaultValue(q"<false>") bool streamable_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
@@ -1959,9 +1991,7 @@ class CommandOutputParameter : SchemaBase
      */
     Union!(None, CommandOutputBinding) outputBinding_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
@@ -1985,7 +2015,7 @@ class CommandOutputParameter : SchemaBase
  * stdin: $(inputs.an_input_name.path)
  * ```
  */
-class stdin : SchemaBase
+class stdin : EnumSchemaBase
 {
     ///
     enum Symbol
@@ -1995,9 +2025,7 @@ class stdin : SchemaBase
 
     Symbol value;
 
-    mixin genCtor;
-    mixin genOpEq;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
@@ -2047,7 +2075,7 @@ class stdin : SchemaBase
  * (e.g. `echo a && echo b`) `stdout` must include the output of
  * every command.
  */
-class stdout : SchemaBase
+class stdout : EnumSchemaBase
 {
     ///
     enum Symbol
@@ -2057,9 +2085,7 @@ class stdout : SchemaBase
 
     Symbol value;
 
-    mixin genCtor;
-    mixin genOpEq;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
@@ -2105,7 +2131,7 @@ class stdout : SchemaBase
  * stderr: random_stderr_filenameABCDEFG
  * ```
  */
-class stderr : SchemaBase
+class stderr : EnumSchemaBase
 {
     ///
     enum Symbol
@@ -2115,15 +2141,13 @@ class stderr : SchemaBase
 
     Symbol value;
 
-    mixin genCtor;
-    mixin genOpEq;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
  * This defines the schema of the CWL Command Line Tool Description document.
  */
-@documentRoot class CommandLineTool : SchemaBase
+@documentRoot class CommandLineTool : RecordSchemaBase
 {
     /**
      * The unique identifier for this object.
@@ -2167,7 +2191,7 @@ class stderr : SchemaBase
      * error and the implementation must not attempt to run the process,
      * unless overridden at user option.
      */
-    @idMap("class") Union!(None, Union!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement)[]) requirements_;
+    @idMap("class") Union!(None, Union!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement, Any)[]) requirements_;
     /**
      * Declares hints applying to either the runtime environment or the
      * workflow engine that may be helpful in executing this process.  It is
@@ -2277,9 +2301,7 @@ class stderr : SchemaBase
      */
     Union!(None, int[]) permanentFailCodes_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
@@ -2335,7 +2357,7 @@ class stderr : SchemaBase
  * using `--env` or `--env-file` and interact with the container's preexisting
  * environment as defined by Docker.
  */
-class DockerRequirement : SchemaBase
+class DockerRequirement : RecordSchemaBase
 {
     /**
      * Always 'DockerRequirement'
@@ -2372,16 +2394,14 @@ class DockerRequirement : SchemaBase
      */
     Union!(None, string) dockerOutputDirectory_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
  * A list of software packages that should be configured in the environment of
  * the defined process.
  */
-class SoftwareRequirement : SchemaBase
+class SoftwareRequirement : RecordSchemaBase
 {
     /**
      * Always 'SoftwareRequirement'
@@ -2392,13 +2412,11 @@ class SoftwareRequirement : SchemaBase
      */
     @idMap("package", "specs") SoftwarePackage[] packages_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 ///
-class SoftwarePackage : SchemaBase
+class SoftwarePackage : RecordSchemaBase
 {
     /**
      * The name of the software to be made available. If the name is
@@ -2456,9 +2474,7 @@ class SoftwarePackage : SchemaBase
      */
     @link() Union!(None, string[]) specs_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
@@ -2471,7 +2487,7 @@ class SoftwarePackage : SchemaBase
  * However, under certain circumstances, files may be staged at
  * arbitrary locations, see discussion for `entryname`.
  */
-class Dirent : SchemaBase
+class Dirent : RecordSchemaBase
 {
     /**
      * The "target" name of the file or subdirectory.  If `entry` is
@@ -2546,18 +2562,16 @@ class Dirent : SchemaBase
      * attempting to rename or delete files or directories that are
      * not explicitly marked as writable.
      */
-    Union!(None, bool) writable_;
+    @defaultValue(q"<false>") bool writable_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
  * Define a list of files and subdirectories that must be staged by the workflow platform prior to executing the command line tool.
  * Normally files are staged within the designated output directory. However, when running inside containers, files may be staged at arbitrary locations, see discussion for [`Dirent.entryname`](#Dirent). Together with `DockerRequirement.dockerOutputDirectory` it is possible to control the locations of both input and output files when running in containers.
  */
-class InitialWorkDirRequirement : SchemaBase
+class InitialWorkDirRequirement : RecordSchemaBase
 {
     /**
      * InitialWorkDirRequirement
@@ -2591,16 +2605,14 @@ class InitialWorkDirRequirement : SchemaBase
      */
     Union!(Expression, Union!(None, Dirent, Expression, File, Directory, Union!(File, Directory)[])[]) listing_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
  * Define a list of environment variables which will be set in the
  * execution environment of the tool.  See `EnvironmentDef` for details.
  */
-class EnvVarRequirement : SchemaBase
+class EnvVarRequirement : RecordSchemaBase
 {
     /**
      * Always 'EnvVarRequirement'
@@ -2611,9 +2623,7 @@ class EnvVarRequirement : SchemaBase
      */
     @idMap("envName", "envValue") EnvironmentDef[] envDef_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
@@ -2625,16 +2635,14 @@ class EnvVarRequirement : SchemaBase
  * argument is joined into the command string without quoting, which allows
  * the use of shell metacharacters such as `|` for pipes.
  */
-class ShellCommandRequirement : SchemaBase
+class ShellCommandRequirement : RecordSchemaBase
 {
     /**
      * Always 'ShellCommandRequirement'
      */
     static immutable class_ = "ShellCommandRequirement";
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
@@ -2664,7 +2672,7 @@ class ShellCommandRequirement : SchemaBase
  * 
  * If neither "min" nor "max" is specified for a resource, use the default values below.
  */
-class ResourceRequirement : SchemaBase
+class ResourceRequirement : RecordSchemaBase
 {
     /**
      * Always 'ResourceRequirement'
@@ -2753,9 +2761,7 @@ class ResourceRequirement : SchemaBase
      */
     Union!(None, int, long, float, Expression) outdirMax_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
@@ -2769,18 +2775,16 @@ class ResourceRequirement : SchemaBase
  * If `WorkReuse` is not specified, correct tools should assume it
  * is enabled by default.
  */
-class WorkReuse : SchemaBase
+class WorkReuse : RecordSchemaBase
 {
     /**
      * Always 'WorkReuse'
      */
     static immutable class_ = "WorkReuse";
     ///
-    Union!(bool, Expression) enableReuse_;
+    @defaultValue(q"<true>") Union!(bool, Expression) enableReuse_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
@@ -2800,7 +2804,7 @@ class WorkReuse : SchemaBase
  * Enabling network access does not imply a publicly routable IP
  * address or the ability to accept inbound connections.
  */
-class NetworkAccess : SchemaBase
+class NetworkAccess : RecordSchemaBase
 {
     /**
      * Always 'NetworkAccess'
@@ -2809,9 +2813,7 @@ class NetworkAccess : SchemaBase
     ///
     Union!(bool, Expression) networkAccess_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
@@ -2846,7 +2848,7 @@ class NetworkAccess : SchemaBase
  * In particular, enabling this feature implies that WorkReuse should
  * not be enabled.
  */
-class InplaceUpdateRequirement : SchemaBase
+class InplaceUpdateRequirement : RecordSchemaBase
 {
     /**
      * Always 'InplaceUpdateRequirement'
@@ -2855,9 +2857,7 @@ class InplaceUpdateRequirement : SchemaBase
     ///
     bool inplaceUpdate_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
@@ -2869,7 +2869,7 @@ class InplaceUpdateRequirement : SchemaBase
  * staging of files, pulling a docker image etc, and only counts
  * wall-time for the execution of the command line itself.
  */
-class ToolTimeLimit : SchemaBase
+class ToolTimeLimit : RecordSchemaBase
 {
     /**
      * Always 'ToolTimeLimit'
@@ -2881,13 +2881,11 @@ class ToolTimeLimit : SchemaBase
      */
     Union!(int, long, Expression) timelimit_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 ///
-class ExpressionToolOutputParameter : SchemaBase
+class ExpressionToolOutputParameter : RecordSchemaBase
 {
     /**
      * A short, human-readable label of this object.
@@ -2945,7 +2943,7 @@ class ExpressionToolOutputParameter : SchemaBase
      * indicate whether it is valid to stream file contents using a named
      * pipe.  Default: `false`.
      */
-    Union!(None, bool) streamable_;
+    @defaultValue(q"<false>") bool streamable_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
@@ -2968,13 +2966,11 @@ class ExpressionToolOutputParameter : SchemaBase
      */
     @typeDSL Union!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string, Union!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string)[]) type_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 ///
-class WorkflowInputParameter : SchemaBase
+class WorkflowInputParameter : RecordSchemaBase
 {
     /**
      * A short, human-readable label of this object.
@@ -3032,7 +3028,7 @@ class WorkflowInputParameter : SchemaBase
      * indicate whether it is valid to stream file contents using a named
      * pipe.  Default: `false`.
      */
-    Union!(None, bool) streamable_;
+    @defaultValue(q"<false>") bool streamable_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
@@ -3080,7 +3076,7 @@ class WorkflowInputParameter : SchemaBase
      * object is `null`.  Default values are applied before evaluating expressions
      * (e.g. dependent `valueFrom` fields).
      */
-    Union!(None, File, Directory, Any) default_;
+    Union!(None, CWLObjectType) default_;
     /**
      * Specify valid types of data that may be assigned to this parameter.
      */
@@ -3091,9 +3087,7 @@ class WorkflowInputParameter : SchemaBase
      */
     Union!(None, InputBinding) inputBinding_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
@@ -3105,7 +3099,7 @@ class WorkflowInputParameter : SchemaBase
  * rearrangement of the inputs. No Docker software container is required
  * or allowed.
  */
-@documentRoot class ExpressionTool : SchemaBase
+@documentRoot class ExpressionTool : RecordSchemaBase
 {
     /**
      * The unique identifier for this object.
@@ -3149,7 +3143,7 @@ class WorkflowInputParameter : SchemaBase
      * error and the implementation must not attempt to run the process,
      * unless overridden at user option.
      */
-    @idMap("class") Union!(None, Union!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement)[]) requirements_;
+    @idMap("class") Union!(None, Union!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement, Any)[]) requirements_;
     /**
      * Declares hints applying to either the runtime environment or the
      * workflow engine that may be helpful in executing this process.  It is
@@ -3188,15 +3182,13 @@ class WorkflowInputParameter : SchemaBase
      */
     Expression expression_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
  * The input link merge method, described in [WorkflowStepInput](#WorkflowStepInput).
  */
-class LinkMergeMethod : SchemaBase
+class LinkMergeMethod : EnumSchemaBase
 {
     ///
     enum Symbol
@@ -3207,15 +3199,13 @@ class LinkMergeMethod : SchemaBase
 
     Symbol value;
 
-    mixin genCtor;
-    mixin genOpEq;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
  * Picking non-null values among inbound data links, described in [WorkflowStepInput](#WorkflowStepInput).
  */
-class PickValueMethod : SchemaBase
+class PickValueMethod : EnumSchemaBase
 {
     ///
     enum Symbol
@@ -3227,9 +3217,7 @@ class PickValueMethod : SchemaBase
 
     Symbol value;
 
-    mixin genCtor;
-    mixin genOpEq;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
@@ -3241,7 +3229,7 @@ class PickValueMethod : SchemaBase
  * See [WorkflowStepInput](#WorkflowStepInput) for discussion of
  * `linkMerge` and `pickValue`.
  */
-class WorkflowOutputParameter : SchemaBase
+class WorkflowOutputParameter : RecordSchemaBase
 {
     /**
      * A short, human-readable label of this object.
@@ -3299,7 +3287,7 @@ class WorkflowOutputParameter : SchemaBase
      * indicate whether it is valid to stream file contents using a named
      * pipe.  Default: `false`.
      */
-    Union!(None, bool) streamable_;
+    @defaultValue(q"<false>") bool streamable_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
@@ -3327,7 +3315,7 @@ class WorkflowOutputParameter : SchemaBase
      * The method to use to merge multiple sources into a single array.
      * If not specified, the default method is "merge_nested".
      */
-    Union!(None, LinkMergeMethod) linkMerge_;
+    @defaultValue(q"<"merge_nested">") LinkMergeMethod linkMerge_;
     /**
      * The method to use to choose non-null elements among multiple sources.
      */
@@ -3337,9 +3325,7 @@ class WorkflowOutputParameter : SchemaBase
      */
     @typeDSL Union!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string, Union!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string)[]) type_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
@@ -3452,7 +3438,7 @@ class WorkflowOutputParameter : SchemaBase
  *    sources are conditional, so null sources (from skipped steps)
  *    should be filtered out.
  */
-class WorkflowStepInput : SchemaBase
+class WorkflowStepInput : RecordSchemaBase
 {
     /**
      * The unique identifier for this object.
@@ -3467,7 +3453,7 @@ class WorkflowStepInput : SchemaBase
      * The method to use to merge multiple inbound links into a single array.
      * If not specified, the default method is "merge_nested".
      */
-    Union!(None, LinkMergeMethod) linkMerge_;
+    @defaultValue(q"<"merge_nested">") LinkMergeMethod linkMerge_;
     /**
      * The method to use to choose non-null elements among multiple sources.
      */
@@ -3505,7 +3491,7 @@ class WorkflowStepInput : SchemaBase
      * `source` field, or the value produced by the `source` is `null`.  The
      * default must be applied prior to scattering or evaluating `valueFrom`.
      */
-    Union!(None, File, Directory, Any) default_;
+    Union!(None, CWLObjectType) default_;
     /**
      * To use valueFrom, [StepInputExpressionRequirement](#StepInputExpressionRequirement) must
      * be specified in the workflow or workflow step requirements.
@@ -3532,9 +3518,7 @@ class WorkflowStepInput : SchemaBase
      */
     Union!(None, string, Expression) valueFrom_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
@@ -3547,22 +3531,20 @@ class WorkflowStepInput : SchemaBase
  * the identifier to use in the `source` field of `WorkflowStepInput`
  * to connect the output value to downstream parameters.
  */
-class WorkflowStepOutput : SchemaBase
+class WorkflowStepOutput : RecordSchemaBase
 {
     /**
      * The unique identifier for this object.
      */
     @id Union!(None, string) id_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
  * The scatter method, as described in [workflow step scatter](#WorkflowStep).
  */
-class ScatterMethod : SchemaBase
+class ScatterMethod : EnumSchemaBase
 {
     ///
     enum Symbol
@@ -3574,9 +3556,7 @@ class ScatterMethod : SchemaBase
 
     Symbol value;
 
-    mixin genCtor;
-    mixin genOpEq;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
@@ -3660,7 +3640,7 @@ class ScatterMethod : SchemaBase
  * It is a fatal error if a workflow directly or indirectly invokes itself as
  * a subworkflow (recursive workflows are not allowed).
  */
-class WorkflowStep : SchemaBase
+class WorkflowStep : RecordSchemaBase
 {
     /**
      * The unique identifier for this object.
@@ -3686,7 +3666,7 @@ class WorkflowStep : SchemaBase
      * Defines the parameters representing the output of the process.  May be
      * used to generate and/or validate the output object.
      */
-    @link(LinkResolver.id) Union!(Union!(string, WorkflowStepOutput)[]) out_;
+    @link(LinkResolver.id) Union!(string, WorkflowStepOutput)[] out_;
     /**
      * Declares requirements that apply to either the runtime environment or the
      * workflow engine that must be met in order to execute this workflow step.  If
@@ -3695,7 +3675,7 @@ class WorkflowStep : SchemaBase
      * error and the implementation must not attempt to run the process,
      * unless overridden at user option.
      */
-    @idMap("class") Union!(None, Union!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement)[]) requirements_;
+    @idMap("class") Union!(None, Union!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement, Any)[]) requirements_;
     /**
      * Declares hints applying to either the runtime environment or the
      * workflow engine that may be helpful in executing this workflow step.  It is
@@ -3721,9 +3701,7 @@ class WorkflowStep : SchemaBase
      */
     Union!(None, ScatterMethod) scatterMethod_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
@@ -3779,7 +3757,7 @@ class WorkflowStep : SchemaBase
  * available as standard [extensions](#Extensions_and_Metadata) to core
  * workflow semantics.
  */
-@documentRoot class Workflow : SchemaBase
+@documentRoot class Workflow : RecordSchemaBase
 {
     /**
      * The unique identifier for this object.
@@ -3823,7 +3801,7 @@ class WorkflowStep : SchemaBase
      * error and the implementation must not attempt to run the process,
      * unless overridden at user option.
      */
-    @idMap("class") Union!(None, Union!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement)[]) requirements_;
+    @idMap("class") Union!(None, Union!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement, Any)[]) requirements_;
     /**
      * Declares hints applying to either the runtime environment or the
      * workflow engine that may be helpful in executing this process.  It is
@@ -3861,81 +3839,71 @@ class WorkflowStep : SchemaBase
      * the steps in a different order than listed and/or execute steps
      * concurrently, provided that dependencies between steps are met.
      */
-    @idMap("id") Union!(WorkflowStep[]) steps_;
+    @idMap("id") WorkflowStep[] steps_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
  * Indicates that the workflow platform must support nested workflows in
  * the `run` field of [WorkflowStep](#WorkflowStep).
  */
-class SubworkflowFeatureRequirement : SchemaBase
+class SubworkflowFeatureRequirement : RecordSchemaBase
 {
     /**
      * Always 'SubworkflowFeatureRequirement'
      */
     static immutable class_ = "SubworkflowFeatureRequirement";
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
  * Indicates that the workflow platform must support the `scatter` and
  * `scatterMethod` fields of [WorkflowStep](#WorkflowStep).
  */
-class ScatterFeatureRequirement : SchemaBase
+class ScatterFeatureRequirement : RecordSchemaBase
 {
     /**
      * Always 'ScatterFeatureRequirement'
      */
     static immutable class_ = "ScatterFeatureRequirement";
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
  * Indicates that the workflow platform must support multiple inbound data links
  * listed in the `source` field of [WorkflowStepInput](#WorkflowStepInput).
  */
-class MultipleInputFeatureRequirement : SchemaBase
+class MultipleInputFeatureRequirement : RecordSchemaBase
 {
     /**
      * Always 'MultipleInputFeatureRequirement'
      */
     static immutable class_ = "MultipleInputFeatureRequirement";
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
  * Indicate that the workflow platform must support the `valueFrom` field
  * of [WorkflowStepInput](#WorkflowStepInput).
  */
-class StepInputExpressionRequirement : SchemaBase
+class StepInputExpressionRequirement : RecordSchemaBase
 {
     /**
      * Always 'StepInputExpressionRequirement'
      */
     static immutable class_ = "StepInputExpressionRequirement";
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
  * Describe an input parameter of an operation.
  */
-class OperationInputParameter : SchemaBase
+class OperationInputParameter : RecordSchemaBase
 {
     /**
      * A short, human-readable label of this object.
@@ -3993,7 +3961,7 @@ class OperationInputParameter : SchemaBase
      * indicate whether it is valid to stream file contents using a named
      * pipe.  Default: `false`.
      */
-    Union!(None, bool) streamable_;
+    @defaultValue(q"<false>") bool streamable_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
@@ -4041,21 +4009,19 @@ class OperationInputParameter : SchemaBase
      * object is `null`.  Default values are applied before evaluating expressions
      * (e.g. dependent `valueFrom` fields).
      */
-    Union!(None, File, Directory, Any) default_;
+    Union!(None, CWLObjectType) default_;
     /**
      * Specify valid types of data that may be assigned to this parameter.
      */
     @typeDSL Union!(CWLType, InputRecordSchema, InputEnumSchema, InputArraySchema, string, Union!(CWLType, InputRecordSchema, InputEnumSchema, InputArraySchema, string)[]) type_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
  * Describe an output parameter of an operation.
  */
-class OperationOutputParameter : SchemaBase
+class OperationOutputParameter : RecordSchemaBase
 {
     /**
      * A short, human-readable label of this object.
@@ -4113,7 +4079,7 @@ class OperationOutputParameter : SchemaBase
      * indicate whether it is valid to stream file contents using a named
      * pipe.  Default: `false`.
      */
-    Union!(None, bool) streamable_;
+    @defaultValue(q"<false>") bool streamable_;
     /**
      * A documentation string for this object, or an array of strings which should be concatenated.
      */
@@ -4134,9 +4100,7 @@ class OperationOutputParameter : SchemaBase
      */
     @typeDSL Union!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string, Union!(CWLType, OutputRecordSchema, OutputEnumSchema, OutputArraySchema, string)[]) type_;
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 /**
@@ -4148,7 +4112,7 @@ class OperationOutputParameter : SchemaBase
  * an Operation to a concrete process (such as Workflow,
  * CommandLineTool, or ExpressionTool) with a compatible signature.
  */
-@documentRoot class Operation : SchemaBase
+@documentRoot class Operation : RecordSchemaBase
 {
     /**
      * The unique identifier for this object.
@@ -4192,7 +4156,7 @@ class OperationOutputParameter : SchemaBase
      * error and the implementation must not attempt to run the process,
      * unless overridden at user option.
      */
-    @idMap("class") Union!(None, Union!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement)[]) requirements_;
+    @idMap("class") Union!(None, Union!(InlineJavascriptRequirement, SchemaDefRequirement, LoadListingRequirement, DockerRequirement, SoftwareRequirement, InitialWorkDirRequirement, EnvVarRequirement, ShellCommandRequirement, ResourceRequirement, WorkReuse, NetworkAccess, InplaceUpdateRequirement, ToolTimeLimit, SubworkflowFeatureRequirement, ScatterFeatureRequirement, MultipleInputFeatureRequirement, StepInputExpressionRequirement, Any)[]) requirements_;
     /**
      * Declares hints applying to either the runtime environment or the
      * workflow engine that may be helpful in executing this process.  It is
@@ -4225,9 +4189,7 @@ class OperationOutputParameter : SchemaBase
     ///
     static immutable class_ = "Operation";
 
-    mixin genCtor;
-    mixin genIdentifier;
-    mixin genDumper;
+    mixin genBody;
 }
 
 ///
@@ -4239,7 +4201,11 @@ alias importFromURI = import_!DocumentRootType;
 @("Test for generated parser")
 unittest
 {
-    import std : dirEntries, SpanMode;
+    import std : dirEntries, SpanMode, stdThreadLocalLog, NullLogger;
+
+    auto currentLogger = stdThreadLocalLog;
+    stdThreadLocalLog = new NullLogger;
+    scope(exit) stdThreadLocalLog = currentLogger;
 
     auto resourceDir = "resources/cwl-v1.2";
     foreach (file; dirEntries(resourceDir, SpanMode.depth))

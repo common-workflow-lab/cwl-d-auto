@@ -85,5 +85,3 @@ $ dub test
 
 ## Future plan
 - Support [extension fields](https://www.commonwl.org/v1.2/CommandLineTool.html#Extensions_and_metadata)
-- Support CWL documents that are based on YAML v1.2
-  - e.g., Documents in which there is `:` in the unquoted strings
